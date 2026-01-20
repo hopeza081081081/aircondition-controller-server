@@ -1,5 +1,5 @@
 # Environment variables
-.env
+# .env - Commented out for local testing on Raspberry Pi
 
 # Dependencies
 node_modules/
