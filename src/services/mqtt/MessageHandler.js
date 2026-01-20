@@ -67,8 +67,12 @@ class MessageHandler {
   async _handleRpiObjDetector(rpiId, message) {
     const topic = `myFinalProject/rpi${rpiId}/objDetector`;
 
-    // Relay to cloud
-    await this.cloudMqtt.relayRpiData(rpiId, topic, message, 0);
+    // Relay to cloud (non-critical - don't let cloud failures affect local operations)
+    try {
+      await this.cloudMqtt.relayRpiData(rpiId, topic, message, 0);
+    } catch (error) {
+      Logger.warn(`Failed to relay RPI${rpiId} data to cloud`, error);
+    }
 
     // Parse detection data
     try {
@@ -89,8 +93,12 @@ class MessageHandler {
     const rpiId = rpiIndex + 1;
     const topic = `myFinalProject/rpi${rpiId}/onlineStatus/online`;
 
-    // Relay to cloud
-    await this.cloudMqtt.relayRpiOnlineStatus(rpiId, topic, message);
+    // Relay to cloud (non-critical)
+    try {
+      await this.cloudMqtt.relayRpiOnlineStatus(rpiId, topic, message);
+    } catch (error) {
+      Logger.warn(`Failed to relay RPI${rpiId} online status to cloud`, error);
+    }
 
     // Update RPI state
     if (message === 'true') {
@@ -110,13 +118,23 @@ class MessageHandler {
   async _handleAirconData(controllerIndex, topic, message) {
     const controllerId = controllerIndex + 1;
 
-    // Relay to cloud
-    if (topic.includes('/measure')) {
-      await this.cloudMqtt.relayAirconMeasure(controllerId, topic, message);
-      this._handleAirconMeasure(controllerIndex, message);
-    } else if (topic.includes('/properties')) {
-      await this.cloudMqtt.relayAirconProperties(controllerId, topic, message);
-      this._handleAirconProperties(controllerIndex, message);
+    // Relay to cloud (non-critical)
+    try {
+      if (topic.includes('/measure')) {
+        await this.cloudMqtt.relayAirconMeasure(controllerId, topic, message);
+        this._handleAirconMeasure(controllerIndex, message);
+      } else if (topic.includes('/properties')) {
+        await this.cloudMqtt.relayAirconProperties(controllerId, topic, message);
+        this._handleAirconProperties(controllerIndex, message);
+      }
+    } catch (error) {
+      Logger.warn(`Failed to relay aircon controller ${controllerId} data to cloud`, error);
+      // Continue processing locally even if cloud relay fails
+      if (topic.includes('/measure')) {
+        this._handleAirconMeasure(controllerIndex, message);
+      } else if (topic.includes('/properties')) {
+        this._handleAirconProperties(controllerIndex, message);
+      }
     }
   }
 

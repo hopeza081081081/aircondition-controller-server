@@ -40,22 +40,44 @@ class LocalMqttService extends MqttClient {
    * @param {string} status - 'true' or 'false'
    */
   async publishOnlineStatus(status) {
-    await this.publish(
-      'myFinalProject/server/properties/online',
-      status,
-      { qos: 2, retain: true }
-    );
+    try {
+      await this.publish(
+        'myFinalProject/server/properties/online',
+        status,
+        { qos: 2, retain: true }
+      );
+    } catch (error) {
+      Logger.error('LocalMQTT - Failed to publish online status', error);
+      // Don't throw - non-critical error
+    }
   }
 
   /**
-   * Publish command to aircon controller
+   * Publish command to aircon controller with retry
    * @param {number} controllerId - Controller ID (1, 2, or 3)
    * @param {string} command - Command ('true' or 'false')
    */
   async publishCommand(controllerId, command) {
     const topic = `myFinalProject/server/electricalAppliances/airconController${controllerId}/command`;
-    await this.publish(topic, command, { qos: 2, retain: true });
-    Logger.debug(`LocalMQTT - Command sent to controller ${controllerId}: ${command}`);
+    const maxRetries = 3;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await this.publish(topic, command, { qos: 2, retain: true });
+        Logger.debug(`LocalMQTT - Command sent to controller ${controllerId}: ${command}`);
+        return;
+      } catch (error) {
+        Logger.warn(`LocalMQTT - Publish attempt ${attempt} failed for controller ${controllerId}`, error);
+
+        if (attempt === maxRetries) {
+          Logger.error(`LocalMQTT - Failed to publish command to controller ${controllerId} after ${maxRetries} attempts`, error);
+          return; // Don't throw - allow system to continue
+        }
+
+        // Wait before retry (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+      }
+    }
   }
 
   /**

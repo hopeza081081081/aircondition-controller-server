@@ -3,6 +3,9 @@
  * Orchestrates all modules and starts the application
  */
 
+// Load environment variables first
+require('dotenv').config();
+
 const config = require('./config');
 const Logger = require('./utils/Logger');
 

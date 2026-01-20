@@ -3,6 +3,9 @@
  * Worker thread for MongoDB data persistence
  */
 
+// Load environment variables
+require('dotenv').config();
+
 const mongoose = require('mongoose');
 const { parentPort } = require('worker_threads');
 const Logger = require('../utils/Logger');
@@ -69,7 +72,7 @@ const deviceDataSchema = new mongoose.Schema({
 const DeviceData = mongoose.model('iotdevicedatas', deviceDataSchema);
 
 // MongoDB connection
-const mongoUrl = 'mongodb+srv://thanakorn:5617091@cluster0.ljv90.mongodb.net/finalproject';
+const mongoUrl = process.env.MONGODB_URI || 'mongodb+srv://thanakorn:5617091@cluster0.ljv90.mongodb.net/finalproject';
 const dataPushingInterval = 300000; // 5 minutes
 
 let deviceDataModel = null;

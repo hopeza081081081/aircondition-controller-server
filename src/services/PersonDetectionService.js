@@ -96,14 +96,22 @@ class PersonDetectionService {
     for (let i = 0; i < controllerCount; i++) {
       const controllerId = i + 1;
 
-      // Publish to local MQTT
-      await this.localMqtt.publishCommand(controllerId, 'false');
+      try {
+        // Publish to local MQTT
+        await this.localMqtt.publishCommand(controllerId, 'false');
 
-      // Publish to cloud MQTT
-      await this.cloudMqtt.relayControllerCommand(controllerId, 'false');
+        // Publish to cloud MQTT (non-critical)
+        try {
+          await this.cloudMqtt.relayControllerCommand(controllerId, 'false');
+        } catch (cloudError) {
+          Logger.warn(`Failed to relay controller ${controllerId} off command to cloud`, cloudError);
+        }
 
-      // Update device model
-      this.deviceModel.setAirconCommand(i, false);
+        // Update device model
+        this.deviceModel.setAirconCommand(i, false);
+      } catch (error) {
+        Logger.error(`Failed to turn off controller ${controllerId}`, error);
+      }
     }
 
     Logger.info('All aircon controllers turned off');
@@ -119,14 +127,22 @@ class PersonDetectionService {
     for (let i = 0; i < controllerCount; i++) {
       const controllerId = i + 1;
 
-      // Publish to local MQTT
-      await this.localMqtt.publishCommand(controllerId, 'true');
+      try {
+        // Publish to local MQTT
+        await this.localMqtt.publishCommand(controllerId, 'true');
 
-      // Publish to cloud MQTT
-      await this.cloudMqtt.relayControllerCommand(controllerId, 'true');
+        // Publish to cloud MQTT (non-critical)
+        try {
+          await this.cloudMqtt.relayControllerCommand(controllerId, 'true');
+        } catch (cloudError) {
+          Logger.warn(`Failed to relay controller ${controllerId} on command to cloud`, cloudError);
+        }
 
-      // Update device model
-      this.deviceModel.setAirconCommand(i, true);
+        // Update device model
+        this.deviceModel.setAirconCommand(i, true);
+      } catch (error) {
+        Logger.error(`Failed to turn on controller ${controllerId}`, error);
+      }
     }
 
     Logger.info('All aircon controllers turned on');
