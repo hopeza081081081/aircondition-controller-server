@@ -1,0 +1,136 @@
+/**
+ * Person Detection Service
+ * Business logic for person detection and aircon control
+ */
+
+const Logger = require('../utils/Logger');
+
+class PersonDetectionService {
+  constructor(detectionState, deviceModel, localMqtt, cloudMqtt, config) {
+    this.detectionState = detectionState;
+    this.deviceModel = deviceModel;
+    this.localMqtt = localMqtt;
+    this.cloudMqtt = cloudMqtt;
+    this.config = config;
+    Logger.info('PersonDetectionService initialized');
+  }
+
+  /**
+   * Execute person detection logic
+   */
+  async execute() {
+    try {
+      const rpi1Detected = this.detectionState.getDetectionMessage(0);
+      const rpi2Detected = this.detectionState.getDetectionMessage(1);
+
+      // No person detected by any RPI
+      if (!rpi1Detected.isPerson && !rpi2Detected.isPerson) {
+        await this._handleNoPersonDetected();
+      }
+      // Person detected by at least one RPI
+      else if (rpi1Detected.isPerson || rpi2Detected.isPerson) {
+        await this._handlePersonDetected();
+      }
+    } catch (error) {
+      Logger.error('PersonDetectionService execution error', error);
+    }
+  }
+
+  /**
+   * Handle no person detected scenario
+   * @private
+   */
+  async _handleNoPersonDetected() {
+    // Update RPI states
+    this.deviceModel.updateRpiDetection(0, { isPerson: false, prob: 0.0 });
+    this.deviceModel.updateRpiDetection(1, { isPerson: false, prob: 0.0 });
+
+    // If person was detected before, start shutdown timer
+    if (this.detectionState.getCurrentState()) {
+      this.detectionState.setState(false);
+      Logger.info('Person disappeared, starting shutdown timer');
+
+      this.detectionState.startShutdownTimer(
+        async () => {
+          await this._turnOffAllAircons();
+        },
+        this.config.app.airconPowerOffDuration
+      );
+    }
+  }
+
+  /**
+   * Handle person detected scenario
+   * @private
+   */
+  async _handlePersonDetected() {
+    // Update RPI states
+    const rpi1Detected = this.detectionState.getDetectionMessage(0);
+    const rpi2Detected = this.detectionState.getDetectionMessage(1);
+
+    this.deviceModel.updateRpiDetection(0, {
+      isPerson: true,
+      prob: rpi1Detected.prob
+    });
+    this.deviceModel.updateRpiDetection(1, {
+      isPerson: true,
+      prob: rpi2Detected.prob
+    });
+
+    // If person was not detected before, turn on aircons
+    if (!this.detectionState.getCurrentState()) {
+      this.detectionState.clearShutdownTimer();
+      this.detectionState.setState(true);
+      Logger.info('Person detected, turning on aircons');
+      await this._turnOnAllAircons();
+    }
+  }
+
+  /**
+   * Turn off all aircon controllers
+   * @private
+   */
+  async _turnOffAllAircons() {
+    const controllerCount = this.deviceModel.state.airconController.length;
+
+    for (let i = 0; i < controllerCount; i++) {
+      const controllerId = i + 1;
+
+      // Publish to local MQTT
+      await this.localMqtt.publishCommand(controllerId, 'false');
+
+      // Publish to cloud MQTT
+      await this.cloudMqtt.relayControllerCommand(controllerId, 'false');
+
+      // Update device model
+      this.deviceModel.setAirconCommand(i, false);
+    }
+
+    Logger.info('All aircon controllers turned off');
+  }
+
+  /**
+   * Turn on all aircon controllers
+   * @private
+   */
+  async _turnOnAllAircons() {
+    const controllerCount = this.deviceModel.state.airconController.length;
+
+    for (let i = 0; i < controllerCount; i++) {
+      const controllerId = i + 1;
+
+      // Publish to local MQTT
+      await this.localMqtt.publishCommand(controllerId, 'true');
+
+      // Publish to cloud MQTT
+      await this.cloudMqtt.relayControllerCommand(controllerId, 'true');
+
+      // Update device model
+      this.deviceModel.setAirconCommand(i, true);
+    }
+
+    Logger.info('All aircon controllers turned on');
+  }
+}
+
+module.exports = PersonDetectionService;

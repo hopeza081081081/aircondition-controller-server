@@ -2,9 +2,10 @@
   "name": "952 iot controller",
   "version": "1.0",
   "description": "it created for 952 room only.",
-  "main": "devicesServer.js",
+  "main": "src/index.js",
   "scripts": {
-    "start": "node devicesServer.js",
+    "start": "node src/index.js",
+    "start:legacy": "node devicesServer.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "thanakorn khunkhao",
