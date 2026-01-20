@@ -50,21 +50,32 @@ async function initialize() {
     localMqtt = new LocalMqttService(config.mqtt.local);
     cloudMqtt = new CloudMqttService(config.mqtt.cloud);
 
-    // Connect to MQTT brokers
+    // Connect to MQTT brokers (non-blocking - won't crash if connection fails)
     await localMqtt.initialize();
     await cloudMqtt.initialize();
 
-    // Setup local MQTT subscriptions
-    await localMqtt.setupSubscriptions(config.subscriptions);
+    // Setup local MQTT subscriptions only if connected
+    if (localMqtt.isInitialized()) {
+      try {
+        await localMqtt.setupSubscriptions(config.subscriptions);
+      } catch (error) {
+        Logger.warn('Failed to setup MQTT subscriptions', error);
+      }
+    }
 
     // Initialize message handler
     Logger.info('Initializing message handler...');
     messageHandler = new MessageHandler(deviceModel, cloudMqtt);
 
-    // Wire up MQTT message events
-    localMqtt.on('message', (topic, message) => {
-      messageHandler.handle(topic, message);
-    });
+    // Wire up MQTT message events only if local MQTT is connected
+    if (localMqtt.isInitialized() && localMqtt.isConnected()) {
+      localMqtt.on('message', (topic, message) => {
+        messageHandler.handle(topic, message);
+      });
+      Logger.info('Local MQTT message handler registered');
+    } else {
+      Logger.warn('Local MQTT not connected - message handling disabled');
+    }
 
     // Initialize person detection service
     Logger.info('Initializing person detection service...');
@@ -99,6 +110,10 @@ async function initialize() {
 
     Logger.info('========================================');
     Logger.info('Application started successfully');
+    Logger.info('========================================');
+    Logger.info('MQTT Status:');
+    Logger.info(`  Local MQTT: ${localMqtt.isInitialized() ? '✓ Connected' : '✗ Disconnected (will retry in background)'}`);
+    Logger.info(`  Cloud MQTT: ${cloudMqtt.isInitialized() ? '✓ Connected' : '✗ Disconnected (will retry in background)'}`);
     Logger.info('========================================');
 
     // Setup graceful shutdown

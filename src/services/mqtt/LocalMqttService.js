@@ -13,7 +13,8 @@ class LocalMqttService extends MqttClient {
   }
 
   /**
-   * Initialize local MQTT service
+   * Initialize local MQTT service (non-blocking)
+   * Connection failures won't crash the application
    */
   async initialize() {
     try {
@@ -28,11 +29,44 @@ class LocalMqttService extends MqttClient {
       }
 
       this.initialized = true;
-      Logger.info('LocalMQTT - Service initialized');
+      Logger.info('LocalMQTT - Service initialized successfully');
     } catch (error) {
-      Logger.error('LocalMQTT - Initialization failed', error);
-      throw error;
+      Logger.error('LocalMQTT - Initialization failed, but application will continue', error);
+      // Don't throw - allow application to continue without local MQTT
+      this.initialized = false;
+
+      // Try to reconnect in background
+      this._startReconnectLoop();
     }
+  }
+
+  /**
+   * Start background reconnection loop
+   * @private
+   */
+  _startReconnectLoop() {
+    const reconnectInterval = setInterval(async () => {
+      if (this.isConnected()) {
+        clearInterval(reconnectInterval);
+        Logger.info('LocalMQTT - Reconnected successfully');
+        this.initialized = true;
+        return;
+      }
+
+      Logger.info('LocalMQTT - Attempting to reconnect...');
+      try {
+        await this.connect();
+        await this.publishOnlineStatus('true');
+        for (let i = 1; i <= 3; i++) {
+          await this.publishCommand(i, 'false');
+        }
+        this.initialized = true;
+        clearInterval(reconnectInterval);
+        Logger.info('LocalMQTT - Reconnected and initialized');
+      } catch (error) {
+        Logger.warn('LocalMQTT - Reconnection attempt failed', error);
+      }
+    }, 30000); // Try every 30 seconds
   }
 
   /**

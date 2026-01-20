@@ -97,14 +97,20 @@ class PersonDetectionService {
       const controllerId = i + 1;
 
       try {
-        // Publish to local MQTT
-        await this.localMqtt.publishCommand(controllerId, 'false');
+        // Publish to local MQTT (only if connected)
+        if (this.localMqtt && this.localMqtt.isConnected()) {
+          await this.localMqtt.publishCommand(controllerId, 'false');
+        } else {
+          Logger.warn(`Local MQTT not connected - skipping controller ${controllerId} off command`);
+        }
 
         // Publish to cloud MQTT (non-critical)
-        try {
-          await this.cloudMqtt.relayControllerCommand(controllerId, 'false');
-        } catch (cloudError) {
-          Logger.warn(`Failed to relay controller ${controllerId} off command to cloud`, cloudError);
+        if (this.cloudMqtt && this.cloudMqtt.isConnected()) {
+          try {
+            await this.cloudMqtt.relayControllerCommand(controllerId, 'false');
+          } catch (cloudError) {
+            Logger.warn(`Failed to relay controller ${controllerId} off command to cloud`, cloudError);
+          }
         }
 
         // Update device model
@@ -128,14 +134,20 @@ class PersonDetectionService {
       const controllerId = i + 1;
 
       try {
-        // Publish to local MQTT
-        await this.localMqtt.publishCommand(controllerId, 'true');
+        // Publish to local MQTT (only if connected)
+        if (this.localMqtt && this.localMqtt.isConnected()) {
+          await this.localMqtt.publishCommand(controllerId, 'true');
+        } else {
+          Logger.warn(`Local MQTT not connected - skipping controller ${controllerId} on command`);
+        }
 
         // Publish to cloud MQTT (non-critical)
-        try {
-          await this.cloudMqtt.relayControllerCommand(controllerId, 'true');
-        } catch (cloudError) {
-          Logger.warn(`Failed to relay controller ${controllerId} on command to cloud`, cloudError);
+        if (this.cloudMqtt && this.cloudMqtt.isConnected()) {
+          try {
+            await this.cloudMqtt.relayControllerCommand(controllerId, 'true');
+          } catch (cloudError) {
+            Logger.warn(`Failed to relay controller ${controllerId} on command to cloud`, cloudError);
+          }
         }
 
         // Update device model

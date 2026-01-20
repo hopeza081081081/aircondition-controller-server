@@ -13,7 +13,8 @@ class CloudMqttService extends MqttClient {
   }
 
   /**
-   * Initialize cloud MQTT service
+   * Initialize cloud MQTT service (non-blocking)
+   * Connection failures won't crash the application
    */
   async initialize() {
     try {
@@ -23,11 +24,41 @@ class CloudMqttService extends MqttClient {
       await this.relayServerStatus('true');
 
       this.initialized = true;
-      Logger.info('CloudMQTT - Service initialized');
+      Logger.info('CloudMQTT - Service initialized successfully');
     } catch (error) {
-      Logger.error('CloudMQTT - Initialization failed', error);
-      throw error;
+      Logger.error('CloudMQTT - Initialization failed, but application will continue', error);
+      // Don't throw - allow application to continue without cloud MQTT
+      this.initialized = false;
+
+      // Try to reconnect in background
+      this._startReconnectLoop();
     }
+  }
+
+  /**
+   * Start background reconnection loop
+   * @private
+   */
+  _startReconnectLoop() {
+    const reconnectInterval = setInterval(async () => {
+      if (this.isConnected()) {
+        clearInterval(reconnectInterval);
+        Logger.info('CloudMQTT - Reconnected successfully');
+        this.initialized = true;
+        return;
+      }
+
+      Logger.info('CloudMQTT - Attempting to reconnect...');
+      try {
+        await this.connect();
+        await this.relayServerStatus('true');
+        this.initialized = true;
+        clearInterval(reconnectInterval);
+        Logger.info('CloudMQTT - Reconnected and initialized');
+      } catch (error) {
+        Logger.warn('CloudMQTT - Reconnection attempt failed', error);
+      }
+    }, 30000); // Try every 30 seconds
   }
 
   /**

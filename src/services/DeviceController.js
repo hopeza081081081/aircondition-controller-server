@@ -91,18 +91,20 @@ class DeviceController {
       const controllerId = i + 1;
 
       try {
-        // Publish to local MQTT
-        if (this.dataSync.localMqtt) {
+        // Publish to local MQTT (only if connected)
+        if (this.dataSync.localMqtt && this.dataSync.localMqtt.isConnected()) {
           await this.dataSync.localMqtt.publishCommand(controllerId, 'false');
+        } else {
+          Logger.warn(`Local MQTT not connected - skipping controller ${controllerId} off command`);
         }
 
         // Publish to cloud MQTT (non-critical)
-        try {
-          if (this.dataSync.cloudMqtt) {
+        if (this.dataSync.cloudMqtt && this.dataSync.cloudMqtt.isConnected()) {
+          try {
             await this.dataSync.cloudMqtt.relayControllerCommand(controllerId, 'false');
+          } catch (cloudError) {
+            Logger.warn(`Failed to relay controller ${controllerId} off command to cloud`, cloudError);
           }
-        } catch (cloudError) {
-          Logger.warn(`Failed to relay controller ${controllerId} off command to cloud`, cloudError);
         }
       } catch (error) {
         Logger.error(`Failed to turn off controller ${controllerId} when RPIs offline`, error);
