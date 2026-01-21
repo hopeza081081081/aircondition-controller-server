@@ -6,10 +6,11 @@
 const Logger = require('../utils/Logger');
 
 class DeviceController {
-  constructor(deviceModel, personDetection, dataSync, config) {
+  constructor(deviceModel, personDetection, localMqtt, cloudMqtt, config) {
     this.deviceModel = deviceModel;
     this.personDetection = personDetection;
-    this.dataSync = dataSync;
+    this.localMqtt = localMqtt;
+    this.cloudMqtt = cloudMqtt;
     this.config = config;
     this.eventInterval = null;
     this.running = false;
@@ -71,8 +72,8 @@ class DeviceController {
         await this._handleAnyRpiOnline();
       }
 
-      // Send data to MongoDB worker thread
-      this.dataSync.sendData(this.deviceModel.getDeviceState());
+      // Note: MongoDB saving is handled by MongoDBService.startPeriodicSaving()
+      // This method is called periodically by the service itself
     } catch (error) {
       Logger.error('DeviceController event processing error', error);
     }
@@ -92,16 +93,16 @@ class DeviceController {
 
       try {
         // Publish to local MQTT (only if connected)
-        if (this.dataSync.localMqtt && this.dataSync.localMqtt.isConnected()) {
-          await this.dataSync.localMqtt.publishCommand(controllerId, 'false');
+        if (this.localMqtt && this.localMqtt.isConnected()) {
+          await this.localMqtt.publishCommand(controllerId, 'false');
         } else {
           Logger.warn(`Local MQTT not connected - skipping controller ${controllerId} off command`);
         }
 
         // Publish to cloud MQTT (non-critical)
-        if (this.dataSync.cloudMqtt && this.dataSync.cloudMqtt.isConnected()) {
+        if (this.cloudMqtt && this.cloudMqtt.isConnected()) {
           try {
-            await this.dataSync.cloudMqtt.relayControllerCommand(controllerId, 'false');
+            await this.cloudMqtt.relayControllerCommand(controllerId, 'false');
           } catch (cloudError) {
             Logger.warn(`Failed to relay controller ${controllerId} off command to cloud`, cloudError);
           }

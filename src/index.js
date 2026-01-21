@@ -19,7 +19,7 @@ const CloudMqttService = require('./services/mqtt/CloudMqttService');
 const MessageHandler = require('./services/mqtt/MessageHandler');
 const PersonDetectionService = require('./services/PersonDetectionService');
 const DeviceController = require('./services/DeviceController');
-const DataSyncService = require('./services/DataSyncService');
+const MongoDBService = require('./services/MongoDBService');
 
 // Global instances
 let deviceModel;
@@ -28,8 +28,8 @@ let localMqtt;
 let cloudMqtt;
 let messageHandler;
 let personDetection;
-let dataSync;
 let deviceController;
+let mongoDBService;
 
 /**
  * Initialize application
@@ -87,21 +87,28 @@ async function initialize() {
       config
     );
 
-    // Initialize data sync service (MongoDB worker thread)
-    Logger.info('Initializing data sync service...');
-    dataSync = new DataSyncService('./src/workers/MongoDBWorker.js');
-    dataSync.initialize();
+    // Initialize MongoDB service (non-blocking)
+    Logger.info('Initializing MongoDB service...');
+    mongoDBService = new MongoDBService(config);
 
-    // Store references in dataSync for DeviceController to access
-    dataSync.localMqtt = localMqtt;
-    dataSync.cloudMqtt = cloudMqtt;
+    try {
+      await mongoDBService.connect();
+
+      // Start periodic data saving
+      mongoDBService.startPeriodicSaving(() => deviceModel.getDeviceState());
+      Logger.info('MongoDB periodic saving started');
+    } catch (error) {
+      Logger.error('Failed to connect to MongoDB, but application will continue', error);
+      Logger.warn('MongoDB features will be disabled');
+    }
 
     // Initialize device controller
     Logger.info('Initializing device controller...');
     deviceController = new DeviceController(
       deviceModel,
       personDetection,
-      dataSync,
+      localMqtt,
+      cloudMqtt,
       config
     );
 
@@ -114,6 +121,8 @@ async function initialize() {
     Logger.info('MQTT Status:');
     Logger.info(`  Local MQTT: ${localMqtt.isInitialized() ? '✓ Connected' : '✗ Disconnected (will retry in background)'}`);
     Logger.info(`  Cloud MQTT: ${cloudMqtt.isInitialized() ? '✓ Connected' : '✗ Disconnected (will retry in background)'}`);
+    Logger.info('MongoDB Status:');
+    Logger.info(`  MongoDB: ${mongoDBService.isConnectionActive() ? '✓ Connected' : '✗ Disconnected (data saving disabled)'}`);
     Logger.info('========================================');
 
     // Setup graceful shutdown
@@ -159,10 +168,11 @@ function setupGracefulShutdown() {
         cloudMqtt.disconnect();
       }
 
-      // Stop data sync service
-      if (dataSync) {
-        dataSync.stop();
-        Logger.info('Data sync service stopped');
+      // Stop MongoDB service
+      if (mongoDBService) {
+        await mongoDBService.stopPeriodicSaving();
+        await mongoDBService.disconnect();
+        Logger.info('MongoDB service stopped');
       }
 
       Logger.info('Shutdown complete');
