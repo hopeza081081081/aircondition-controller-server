@@ -5,7 +5,7 @@
 
 const Logger = require('../utils/Logger');
 
-class DeviceController {
+class RaspberrypiService {
   constructor(deviceModel, personDetection, localMqtt, cloudMqtt, config) {
     this.deviceModel = deviceModel;
     this.personDetection = personDetection;
@@ -131,4 +131,4 @@ class DeviceController {
   }
 }
 
-module.exports = DeviceController;
+module.exports = RaspberrypiService;

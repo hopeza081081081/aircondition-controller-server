@@ -5,7 +5,7 @@
 
 const Logger = require('../../utils/Logger');
 
-class MessageHandler {
+class MqttMessageHandlerService {
   constructor(deviceModel, cloudMqtt) {
     this.deviceModel = deviceModel;
     this.cloudMqtt = cloudMqtt;
@@ -134,4 +134,4 @@ class MessageHandler {
   }
 }
 
-module.exports = MessageHandler;
+module.exports = MqttMessageHandlerService;

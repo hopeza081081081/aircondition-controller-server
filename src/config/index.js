@@ -26,6 +26,7 @@ try {
 
 try {
   mqttSubscriptions = JSON.parse(fs.readFileSync(mqttSubConfigPath, 'utf8'));
+  console.log(`mqttSubConfigPath: ${mqttSubConfigPath}`);
   Logger.info('MQTT subscriptions loaded successfully');
 } catch (error) {
   Logger.error('Failed to load mqttSubConfig.json', error);

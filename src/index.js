@@ -16,9 +16,9 @@ const PersonDetectionState = require('./models/PersonDetectionState');
 // Services
 const LocalMqttService = require('./services/mqtt/LocalMqttService');
 const CloudMqttService = require('./services/mqtt/CloudMqttService');
-const MessageHandler = require('./services/mqtt/MessageHandler');
+const MqttMessageHandlerService = require('./services/mqtt/MqttMessageHandlerService');
 const PersonDetectionService = require('./services/PersonDetectionService');
-const DeviceController = require('./services/DeviceController');
+const RaspberrypiService = require('./services/RaspberrypiService');
 const MongoDBService = require('./services/MongoDBService');
 
 // Global instances
@@ -26,9 +26,9 @@ let deviceModel;
 let detectionState;
 let localMqtt;
 let cloudMqtt;
-let messageHandler;
+let mqttMessageHandlerService;
 let personDetection;
-let deviceController;
+let raspberrypiService;
 let mongoDBService;
 
 /**
@@ -65,12 +65,12 @@ async function initialize() {
 
     // Initialize message handler
     Logger.info('Initializing message handler...');
-    messageHandler = new MessageHandler(deviceModel, cloudMqtt);
+    mqttMessageHandlerService = new MqttMessageHandlerService(deviceModel, cloudMqtt);
 
     // Wire up MQTT message events only if local MQTT is connected
     if (localMqtt.isInitialized() && localMqtt.isConnected()) {
       localMqtt.on('message', (topic, message) => {
-        messageHandler.handle(topic, message);
+        mqttMessageHandlerService.handle(topic, message);
       });
       Logger.info('Local MQTT message handler registered');
     } else {
@@ -104,7 +104,7 @@ async function initialize() {
 
     // Initialize device controller
     Logger.info('Initializing device controller...');
-    deviceController = new DeviceController(
+    raspberrypiService = new RaspberrypiService(
       deviceModel,
       personDetection,
       localMqtt,
@@ -113,7 +113,7 @@ async function initialize() {
     );
 
     // Start device controller
-    deviceController.start();
+    raspberrypiService.start();
 
     Logger.info('========================================');
     Logger.info('Application started successfully');
@@ -143,8 +143,8 @@ function setupGracefulShutdown() {
 
     try {
       // Stop device controller
-      if (deviceController) {
-        deviceController.stop();
+      if (raspberrypiService) {
+        raspberrypiService.stop();
         Logger.info('Device controller stopped');
       }
 
