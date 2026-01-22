@@ -1,20 +1,23 @@
 /**
- * MQTT Message Handler
+ * MQTT Message Handler Service
  * Simple handler for processing MQTT messages and updating device state
  */
 
 import DeviceDataModel from '../../models/DeviceDataModel';
+import PersonDetectionState from '../../models/PersonDetectionState';
 import { CloudMqttService } from './CloudMqttService';
 const Logger = require('../../utils/Logger');
 
-export class MessageHandler {
+export class MqttMessageHandlerService {
   private deviceModel: DeviceDataModel;
+  private personDetectionState: PersonDetectionState;
   private cloudMqtt: CloudMqttService;
 
-  constructor(deviceModel: DeviceDataModel, cloudMqtt: CloudMqttService) {
+  constructor(deviceModel: DeviceDataModel, personDetectionState: PersonDetectionState, cloudMqtt: CloudMqttService) {
     this.deviceModel = deviceModel;
+    this.personDetectionState = personDetectionState;
     this.cloudMqtt = cloudMqtt;
-    Logger.info('MessageHandler initialized');
+    Logger.info('MqttMessageHandlerService initialized');
   }
 
   /**
@@ -49,7 +52,14 @@ export class MessageHandler {
       const rpiId = this._getRpiId(topic);
       try {
         const detection = JSON.parse(message) as { isPerson: boolean; prob: number };
+
+        // Update device model
         this.deviceModel.updateRpiDetection(rpiId, detection);
+
+        // Update person detection state (IMPORTANT!)
+        this.personDetectionState.updateDetection(rpiId, detection);
+
+        Logger.debug(`RPI${rpiId + 1} detection updated`, detection);
       } catch (error) {
         Logger.error(`Failed to parse RPI detection message`, error as Error);
       }
@@ -138,3 +148,5 @@ export class MessageHandler {
     return 0; // Default fallback
   }
 }
+
+export default MqttMessageHandlerService;

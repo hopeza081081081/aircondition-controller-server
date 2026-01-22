@@ -17,7 +17,7 @@ import PersonDetectionState from './models/PersonDetectionState';
 // Services
 import { LocalMqttService } from './services/mqtt/LocalMqttService';
 import { CloudMqttService } from './services/mqtt/CloudMqttService';
-import { MessageHandler } from './services/mqtt/MessageHandler';
+import { MqttMessageHandlerService } from './services/mqtt/MqttMessageHandlerService';
 import { PersonDetectionService } from './services/PersonDetectionService';
 import RaspberrypiService from './services/RaspberrypiService';
 import MongoDBService from './services/MongoDBService';
@@ -27,7 +27,7 @@ let deviceModel: DeviceDataModel;
 let personDetectionState: PersonDetectionState;
 let localMqtt: LocalMqttService;
 let cloudMqtt: CloudMqttService;
-let mqttMessageHandlerService: MessageHandler;
+let mqttMessageHandlerService: MqttMessageHandlerService;
 let personDetectionService: PersonDetectionService;
 let raspberrypiService: RaspberrypiService;
 let mongoDBService: MongoDBService;
@@ -66,7 +66,7 @@ async function initialize(): Promise<void> {
 
     // Initialize message handler
     Logger.info('Initializing message handler...');
-    mqttMessageHandlerService = new MessageHandler(deviceModel, cloudMqtt);
+    mqttMessageHandlerService = new MqttMessageHandlerService(deviceModel, personDetectionState, cloudMqtt);
 
     // Wire up MQTT message events only if local MQTT is connected
     if (localMqtt.isInitialized() && localMqtt.isConnected()) {
