@@ -11,20 +11,20 @@ import { AppConfig } from '../types';
 const Logger = require('../utils/Logger');
 
 export class PersonDetectionService {
-  private detectionState: PersonDetectionState;
+  private personDetectionState: PersonDetectionState;
   private deviceModel: DeviceDataModel;
   private localMqtt: LocalMqttService;
   private cloudMqtt: CloudMqttService;
   private config: AppConfig;
 
   constructor(
-    detectionState: PersonDetectionState,
+    personDetectionState: PersonDetectionState,
     deviceModel: DeviceDataModel,
     localMqtt: LocalMqttService,
     cloudMqtt: CloudMqttService,
     config: AppConfig
   ) {
-    this.detectionState = detectionState;
+    this.personDetectionState = personDetectionState;
     this.deviceModel = deviceModel;
     this.localMqtt = localMqtt;
     this.cloudMqtt = cloudMqtt;
@@ -37,8 +37,8 @@ export class PersonDetectionService {
    */
   public async execute(): Promise<void> {
     try {
-      const rpi1Detected = this.detectionState.getDetectionMessage(0);
-      const rpi2Detected = this.detectionState.getDetectionMessage(1);
+      const rpi1Detected = this.personDetectionState.getDetectionMessage(0);
+      const rpi2Detected = this.personDetectionState.getDetectionMessage(1);
 
       // No person detected by any RPI
       if (!rpi1Detected.isPerson && !rpi2Detected.isPerson) {
@@ -63,11 +63,11 @@ export class PersonDetectionService {
     this.deviceModel.updateRpiDetection(1, { isPerson: false, prob: 0.0 });
 
     // If person was detected before, start shutdown timer
-    if (this.detectionState.getCurrentState()) {
-      this.detectionState.setState(false);
+    if (this.personDetectionState.getCurrentState()) {
+      this.personDetectionState.setState(false);
       Logger.info('Person disappeared, starting shutdown timer');
 
-      this.detectionState.startShutdownTimer(
+      this.personDetectionState.startShutdownTimer(
         async () => {
           await this._turnOffAllAircons();
         },
@@ -82,8 +82,8 @@ export class PersonDetectionService {
    */
   private async _handlePersonDetected(): Promise<void> {
     // Update RPI states
-    const rpi1Detected = this.detectionState.getDetectionMessage(0);
-    const rpi2Detected = this.detectionState.getDetectionMessage(1);
+    const rpi1Detected = this.personDetectionState.getDetectionMessage(0);
+    const rpi2Detected = this.personDetectionState.getDetectionMessage(1);
 
     this.deviceModel.updateRpiDetection(0, {
       isPerson: true,
@@ -95,9 +95,9 @@ export class PersonDetectionService {
     });
 
     // If person was not detected before, turn on aircons
-    if (!this.detectionState.getCurrentState()) {
-      this.detectionState.clearShutdownTimer();
-      this.detectionState.setState(true);
+    if (!this.personDetectionState.getCurrentState()) {
+      this.personDetectionState.clearShutdownTimer();
+      this.personDetectionState.setState(true);
       Logger.info('Person detected, turning on aircons');
       await this._turnOnAllAircons();
     }
