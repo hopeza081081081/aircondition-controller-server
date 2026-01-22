@@ -1,6 +1,6 @@
 /**
  * MQTT Message Handler
- * Processes incoming MQTT messages and updates device state
+ * Simple handler for processing MQTT messages and updating device state
  */
 
 const Logger = require('../../utils/Logger');
@@ -22,161 +22,115 @@ class MessageHandler {
       const messageStr = message.toString();
       Logger.debug('Message received', { topic, message: messageStr });
 
-      // RPI1 Object Detector
-      if (topic === 'myFinalProject/rpi1/objDetector') {
-        await this._handleRpiObjDetector(1, messageStr);
-      }
-      // RPI1 Online Status
-      else if (topic === 'myFinalProject/rpi1/onlineStatus/online') {
-        await this._handleRpiOnlineStatus(0, messageStr);
-      }
-      // RPI2 Object Detector
-      else if (topic === 'myFinalProject/rpi2/objDetector') {
-        await this._handleRpiObjDetector(2, messageStr);
-      }
-      // RPI2 Online Status
-      else if (topic === 'myFinalProject/rpi2/onlineStatus/online') {
-        await this._handleRpiOnlineStatus(1, messageStr);
-      }
-      // Aircon Controller 1
-      else if (topic.startsWith('myFinalProject/airconController1/')) {
-        await this._handleAirconData(0, topic, messageStr);
-      }
-      // Aircon Controller 2
-      else if (topic.startsWith('myFinalProject/airconController2/')) {
-        await this._handleAirconData(1, topic, messageStr);
-      }
-      // Aircon Controller 3
-      else if (topic.startsWith('myFinalProject/airconController3/')) {
-        await this._handleAirconData(2, topic, messageStr);
-      }
-      else {
-        Logger.warn('Unknown topic', { topic });
-      }
+      // Update local state
+      this._updateLocalState(topic, messageStr);
+
+      // Relay to cloud (non-critical)
+      await this._relayToCloud(topic, messageStr);
     } catch (error) {
       Logger.error('MQTT message handling error', error, { topic });
     }
   }
 
   /**
-   * Handle RPI object detector message
+   * Update local device state based on message
    * @private
-   * @param {number} rpiId - RPI ID (1 or 2)
-   * @param {string} message - Message payload
-   */
-  async _handleRpiObjDetector(rpiId, message) {
-    const topic = `myFinalProject/rpi${rpiId}/objDetector`;
-
-    // Relay to cloud (non-critical - don't let cloud failures affect local operations)
-    try {
-      await this.cloudMqtt.relayRpiData(rpiId, topic, message, 0);
-    } catch (error) {
-      Logger.warn(`Failed to relay RPI${rpiId} data to cloud`, error);
-    }
-
-    // Parse detection data
-    try {
-      const detection = JSON.parse(message);
-      this.deviceModel.updateRpiDetection(rpiId - 1, detection);
-    } catch (error) {
-      Logger.error(`Failed to parse RPI${rpiId} detection message`, error);
-    }
-  }
-
-  /**
-   * Handle RPI online status message
-   * @private
-   * @param {number} rpiIndex - RPI index (0 or 1)
-   * @param {string} message - Message payload
-   */
-  async _handleRpiOnlineStatus(rpiIndex, message) {
-    const rpiId = rpiIndex + 1;
-    const topic = `myFinalProject/rpi${rpiId}/onlineStatus/online`;
-
-    // Relay to cloud (non-critical)
-    try {
-      await this.cloudMqtt.relayRpiOnlineStatus(rpiId, topic, message);
-    } catch (error) {
-      Logger.warn(`Failed to relay RPI${rpiId} online status to cloud`, error);
-    }
-
-    // Update RPI state
-    if (message === 'true') {
-      this.deviceModel.updateRpiState(rpiIndex, { online: true });
-    } else if (message === 'false') {
-      this.deviceModel.resetRpiState(rpiIndex);
-    }
-  }
-
-  /**
-   * Handle aircon controller data
-   * @private
-   * @param {number} controllerIndex - Controller index (0, 1, or 2)
    * @param {string} topic - MQTT topic
    * @param {string} message - Message payload
    */
-  async _handleAirconData(controllerIndex, topic, message) {
-    const controllerId = controllerIndex + 1;
-
-    // Relay to cloud (non-critical)
-    try {
-      if (topic.includes('/measure')) {
-        await this.cloudMqtt.relayAirconMeasure(controllerId, topic, message);
-        this._handleAirconMeasure(controllerIndex, message);
-      } else if (topic.includes('/properties')) {
-        await this.cloudMqtt.relayAirconProperties(controllerId, topic, message);
-        this._handleAirconProperties(controllerIndex, message);
+  _updateLocalState(topic, message) {
+    // RPI Object Detector
+    if (topic.includes('/objDetector')) {
+      const rpiId = this._getRpiId(topic);
+      try {
+        const detection = JSON.parse(message);
+        this.deviceModel.updateRpiDetection(rpiId, detection);
+      } catch (error) {
+        Logger.error(`Failed to parse RPI detection message`, error);
       }
-    } catch (error) {
-      Logger.warn(`Failed to relay aircon controller ${controllerId} data to cloud`, error);
-      // Continue processing locally even if cloud relay fails
-      if (topic.includes('/measure')) {
-        this._handleAirconMeasure(controllerIndex, message);
-      } else if (topic.includes('/properties')) {
-        this._handleAirconProperties(controllerIndex, message);
+    }
+    // RPI Online Status
+    else if (topic.includes('/onlineStatus/online')) {
+      const rpiId = this._getRpiId(topic);
+      if (message === 'true') {
+        this.deviceModel.updateRpiState(rpiId, { online: true });
+      } else if (message === 'false') {
+        this.deviceModel.resetRpiState(rpiId);
+      }
+    }
+    // Aircon Controller Measure
+    else if (topic.includes('/measure')) {
+      const controllerId = this._getControllerId(topic);
+      try {
+        const measure = JSON.parse(message);
+        this.deviceModel.updateAirconMeasure(controllerId, measure);
+      } catch (error) {
+        Logger.error(`Failed to parse aircon controller ${controllerId + 1} measurement`, error);
+      }
+    }
+    // Aircon Controller Properties
+    else if (topic.includes('/properties')) {
+      const controllerId = this._getControllerId(topic);
+      try {
+        const properties = JSON.parse(message);
+        this.deviceModel.updateAirconProperties(controllerId, {
+          wifiLocalIP: properties.wifiLocalIP,
+          online: properties.online === 'true' || properties.online === true,
+          bootcount: properties.bootcount
+        });
+
+        // Reset measurements if offline
+        if (properties.online === 'false' || properties.online === false) {
+          this.deviceModel.resetAirconMeasure(controllerId);
+        }
+      } catch (error) {
+        Logger.error(`Failed to parse aircon controller ${controllerId + 1} properties`, error);
       }
     }
   }
 
   /**
-   * Handle aircon measurement data
+   * Relay message to cloud MQTT
    * @private
-   * @param {number} controllerIndex - Controller index (0, 1, or 2)
+   * @param {string} topic - MQTT topic
    * @param {string} message - Message payload
    */
-  _handleAirconMeasure(controllerIndex, message) {
+  async _relayToCloud(topic, message) {
+    if (!this.cloudMqtt || !this.cloudMqtt.isConnected()) {
+      return; // Cloud not connected - skip relay
+    }
+
     try {
-      const measure = JSON.parse(message);
-      this.deviceModel.updateAirconMeasure(controllerIndex, measure);
+      // Generic relay - just publish to same topic
+      await this.cloudMqtt.publish(topic, message, { qos: 0, retain: true });
+      Logger.debug('Message relayed to cloud', { topic });
     } catch (error) {
-      Logger.error(`Failed to parse aircon controller ${controllerIndex + 1} measurement`, error);
+      Logger.warn('Failed to relay message to cloud', error);
+      // Don't throw - cloud relay failure is non-critical
     }
   }
 
   /**
-   * Handle aircon properties data
+   * Extract RPI ID from topic
    * @private
-   * @param {number} controllerIndex - Controller index (0, 1, or 2)
-   * @param {string} message - Message payload
+   * @param {string} topic - MQTT topic
+   * @returns {number} RPI index (0 or 1)
    */
-  _handleAirconProperties(controllerIndex, message) {
-    try {
-      const properties = JSON.parse(message);
+  _getRpiId(topic) {
+    return topic.includes('/rpi1/') ? 0 : 1;
+  }
 
-      // Update properties
-      this.deviceModel.updateAirconProperties(controllerIndex, {
-        wifiLocalIP: properties.wifiLocalIP,
-        online: properties.online === 'true' || properties.online === true,
-        bootcount: properties.bootcount
-      });
-
-      // Reset measurements if offline
-      if (properties.online === 'false' || properties.online === false) {
-        this.deviceModel.resetAirconMeasure(controllerIndex);
-      }
-    } catch (error) {
-      Logger.error(`Failed to parse aircon controller ${controllerIndex + 1} properties`, error);
-    }
+  /**
+   * Extract Aircon Controller ID from topic
+   * @private
+   * @param {string} topic - MQTT topic
+   * @returns {number} Controller index (0, 1, or 2)
+   */
+  _getControllerId(topic) {
+    if (topic.includes('/airconController1/')) return 0;
+    if (topic.includes('/airconController2/')) return 1;
+    if (topic.includes('/airconController3/')) return 2;
+    return 0; // Default fallback
   }
 }
 
