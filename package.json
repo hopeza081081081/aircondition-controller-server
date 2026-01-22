@@ -2,10 +2,14 @@
   "name": "952 iot controller",
   "version": "1.0",
   "description": "it created for 952 room only.",
-  "main": "src/index.js",
+  "main": "dist/index.js",
   "scripts": {
-    "start": "node src/index.js",
+    "start": "node dist/index.js",
+    "start:dev": "tsx src/index.ts",
     "start:legacy": "node devicesServer.js",
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "clean": "rm -rf dist",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "thanakorn khunkhao",
@@ -27,5 +31,14 @@
     "multer": "^1.4.2",
     "vue": "^1.0.10",
     "vue-resource": "^0.1.17"
+  },
+  "devDependencies": {
+    "@types/mongoose": "^5.11.96",
+    "@types/mqtt": "^0.0.34",
+    "@types/node": "^25.0.10",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "@types/dotenv": "^8.2.0"
   }
 }
