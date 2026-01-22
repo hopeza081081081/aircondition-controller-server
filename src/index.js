@@ -23,11 +23,11 @@ const MongoDBService = require('./services/MongoDBService');
 
 // Global instances
 let deviceModel;
-let detectionState;
+let personDetectionState;
 let localMqtt;
 let cloudMqtt;
 let mqttMessageHandlerService;
-let personDetection;
+let personDetectionService;
 let raspberrypiService;
 let mongoDBService;
 
@@ -43,7 +43,7 @@ async function initialize() {
     // Initialize models
     Logger.info('Initializing models...');
     deviceModel = new DeviceDataModel(config);
-    detectionState = new PersonDetectionState();
+    personDetectionState = new PersonDetectionState();
 
     // Initialize MQTT services
     Logger.info('Initializing MQTT services...');
@@ -79,8 +79,8 @@ async function initialize() {
 
     // Initialize person detection service
     Logger.info('Initializing person detection service...');
-    personDetection = new PersonDetectionService(
-      detectionState,
+    personDetectionService = new PersonDetectionService(
+      personDetectionState,
       deviceModel,
       localMqtt,
       cloudMqtt,
@@ -106,7 +106,7 @@ async function initialize() {
     Logger.info('Initializing device controller...');
     raspberrypiService = new RaspberrypiService(
       deviceModel,
-      personDetection,
+      personDetectionService,
       localMqtt,
       cloudMqtt,
       config
