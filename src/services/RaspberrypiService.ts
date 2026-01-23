@@ -12,7 +12,7 @@ const Logger = require('../utils/Logger');
 
 export class RaspberrypiService {
   private deviceModel: DeviceDataModel;
-  private personDetection: PersonDetectionService;
+  private personDetectionService: PersonDetectionService;
   private localMqtt: LocalMqttService;
   private cloudMqtt: CloudMqttService;
   private config: AppConfig;
@@ -21,13 +21,13 @@ export class RaspberrypiService {
 
   constructor(
     deviceModel: DeviceDataModel,
-    personDetection: PersonDetectionService,
+    personDetectionService: PersonDetectionService,
     localMqtt: LocalMqttService,
     cloudMqtt: CloudMqttService,
     config: AppConfig
   ) {
     this.deviceModel = deviceModel;
-    this.personDetection = personDetection;
+    this.personDetectionService = personDetectionService;
     this.localMqtt = localMqtt;
     this.cloudMqtt = cloudMqtt;
     this.config = config;
@@ -138,7 +138,7 @@ export class RaspberrypiService {
    */
   private async _handleAnyRpiOnline(): Promise<void> {
     // Execute person detection logic
-    await this.personDetection.execute();
+    await this.personDetectionService.execute();
   }
 
   /**
