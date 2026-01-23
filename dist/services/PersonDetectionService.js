@@ -40,9 +40,6 @@ class PersonDetectionService {
      * @private
      */
     async _handleNoPersonDetected() {
-        // Update RPI states
-        this.deviceModel.updateRpiDetection(0, { isPerson: false, prob: 0.0 });
-        this.deviceModel.updateRpiDetection(1, { isPerson: false, prob: 0.0 });
         // If person was detected before, start shutdown timer
         if (this.personDetectionState.getCurrentState()) {
             this.personDetectionState.setState(false);
@@ -57,17 +54,6 @@ class PersonDetectionService {
      * @private
      */
     async _handlePersonDetected() {
-        // Update RPI states
-        const rpi1Detected = this.personDetectionState.getDetectionMessage(0);
-        const rpi2Detected = this.personDetectionState.getDetectionMessage(1);
-        this.deviceModel.updateRpiDetection(0, {
-            isPerson: true,
-            prob: rpi1Detected.prob
-        });
-        this.deviceModel.updateRpiDetection(1, {
-            isPerson: true,
-            prob: rpi2Detected.prob
-        });
         // If person was not detected before, turn on aircons
         if (!this.personDetectionState.getCurrentState()) {
             this.personDetectionState.clearShutdownTimer();

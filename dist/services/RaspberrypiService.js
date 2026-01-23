@@ -7,9 +7,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.RaspberrypiService = void 0;
 const Logger = require('../utils/Logger');
 class RaspberrypiService {
-    constructor(deviceModel, personDetection, localMqtt, cloudMqtt, config) {
+    constructor(deviceModel, personDetectionService, localMqtt, cloudMqtt, config) {
         this.deviceModel = deviceModel;
-        this.personDetection = personDetection;
+        this.personDetectionService = personDetectionService;
         this.localMqtt = localMqtt;
         this.cloudMqtt = cloudMqtt;
         this.config = config;
@@ -108,7 +108,7 @@ class RaspberrypiService {
      */
     async _handleAnyRpiOnline() {
         // Execute person detection logic
-        await this.personDetection.execute();
+        await this.personDetectionService.execute();
     }
     /**
      * Check if controller is running

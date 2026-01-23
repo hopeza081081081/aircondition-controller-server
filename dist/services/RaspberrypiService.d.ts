@@ -9,13 +9,13 @@ import { CloudMqttService } from './mqtt/CloudMqttService';
 import { AppConfig } from '../types';
 export declare class RaspberrypiService {
     private deviceModel;
-    private personDetection;
+    private personDetectionService;
     private localMqtt;
     private cloudMqtt;
     private config;
     private eventInterval;
     private running;
-    constructor(deviceModel: DeviceDataModel, personDetection: PersonDetectionService, localMqtt: LocalMqttService, cloudMqtt: CloudMqttService, config: AppConfig);
+    constructor(deviceModel: DeviceDataModel, personDetectionService: PersonDetectionService, localMqtt: LocalMqttService, cloudMqtt: CloudMqttService, config: AppConfig);
     /**
      * Start device controller
      */
