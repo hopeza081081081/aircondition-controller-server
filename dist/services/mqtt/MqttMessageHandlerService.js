@@ -9,14 +9,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MqttMessageHandlerService = void 0;
 const RpiTopicMapper_1 = __importDefault(require("../../utils/RpiTopicMapper"));
-const Logger = require('../../utils/Logger');
+const Logger = require("../../utils/Logger");
 class MqttMessageHandlerService {
     constructor(deviceModel, personDetectionState, cloudMqtt) {
         this.deviceModel = deviceModel;
         this.personDetectionState = personDetectionState;
         this.cloudMqtt = cloudMqtt;
         this.rpiMapper = new RpiTopicMapper_1.default(); // Initialize with default mappings (rpi1, rpi2)
-        Logger.info('MqttMessageHandlerService initialized');
+        Logger.info("MqttMessageHandlerService initialized");
     }
     /**
      * Handle incoming MQTT message
@@ -26,14 +26,14 @@ class MqttMessageHandlerService {
     async handle(topic, message) {
         try {
             const messageStr = message.toString();
-            Logger.debug('Message received', { topic, message: messageStr });
+            Logger.debug("Message received", { topic, message: messageStr });
             // Update local state
             this._updateLocalState(topic, messageStr);
             // Relay to cloud (non-critical)
             await this._relayToCloud(topic, messageStr);
         }
         catch (error) {
-            Logger.error('MQTT message handling error', error, { topic });
+            Logger.error("MQTT message handling error", error, { topic });
         }
     }
     /**
@@ -43,8 +43,11 @@ class MqttMessageHandlerService {
      * @param message - Message payload
      */
     _updateLocalState(topic, message) {
+        // Logger.debug("_updateLocalState");
+        // Logger.debug(topic);
+        // Logger.debug(message);
         // RPI Object Detector
-        if (topic.includes('/objDetector')) {
+        if (topic.includes("/objDetector")) {
             const rpiId = this._getRpiId(topic);
             try {
                 const detection = JSON.parse(message);
@@ -59,17 +62,17 @@ class MqttMessageHandlerService {
             }
         }
         // RPI Online Status
-        else if (topic.includes('/onlineStatus/online')) {
+        else if (topic.includes("/onlineStatus/online")) {
             const rpiId = this._getRpiId(topic);
-            if (message === 'true') {
+            if (message === "true") {
                 this.deviceModel.updateRpiState(rpiId, { online: true });
             }
-            else if (message === 'false') {
+            else if (message === "false") {
                 this.deviceModel.resetRpiState(rpiId);
             }
         }
         // Aircon Controller Measure
-        else if (topic.includes('/measure')) {
+        else if (topic.includes("/measure")) {
             const controllerId = this._getControllerId(topic);
             try {
                 const measure = JSON.parse(message);
@@ -80,17 +83,17 @@ class MqttMessageHandlerService {
             }
         }
         // Aircon Controller Properties
-        else if (topic.includes('/properties')) {
+        else if (topic.includes("/properties")) {
             const controllerId = this._getControllerId(topic);
             try {
                 const properties = JSON.parse(message);
                 this.deviceModel.updateAirconProperties(controllerId, {
                     wifiLocalIP: properties.wifiLocalIP,
-                    online: properties.online === 'true' || properties.online === true,
-                    bootcount: properties.bootcount
+                    online: properties.online === "true" || properties.online === true,
+                    bootcount: properties.bootcount,
                 });
                 // Reset measurements if offline
-                if (properties.online === 'false' || properties.online === false) {
+                if (properties.online === "false" || properties.online === false) {
                     this.deviceModel.resetAirconMeasure(controllerId);
                 }
             }
@@ -112,10 +115,10 @@ class MqttMessageHandlerService {
         try {
             // Generic relay - just publish to same topic
             await this.cloudMqtt.publish(topic, message, { qos: 0, retain: true });
-            Logger.debug('Message relayed to cloud', { topic });
+            Logger.debug("Message relayed to cloud", { topic });
         }
         catch (error) {
-            Logger.warn('Failed to relay message to cloud', error);
+            Logger.warn("Failed to relay message to cloud", error);
             // Don't throw - cloud relay failure is non-critical
         }
     }
@@ -130,6 +133,8 @@ class MqttMessageHandlerService {
      * - New: myFinalProject/rpi_B827EB400668/objDetector -> mapped index
      */
     _getRpiId(topic) {
+        console.log(topic);
+        console.log(this.rpiMapper.getRpiId(topic));
         return this.rpiMapper.getRpiId(topic);
     }
     /**
@@ -139,11 +144,11 @@ class MqttMessageHandlerService {
      * @returns Controller index (0, 1, or 2)
      */
     _getControllerId(topic) {
-        if (topic.includes('/airconController1/'))
+        if (topic.includes("/airconController1/"))
             return 0;
-        if (topic.includes('/airconController2/'))
+        if (topic.includes("/airconController2/"))
             return 1;
-        if (topic.includes('/airconController3/'))
+        if (topic.includes("/airconController3/"))
             return 2;
         return 0; // Default fallback
     }

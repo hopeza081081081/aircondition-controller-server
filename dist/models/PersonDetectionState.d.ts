@@ -7,16 +7,22 @@ declare class PersonDetectionState {
     isPersonDetected: boolean;
     shutdownTimer: NodeJS.Timeout | null;
     private detectionMessages;
-    constructor();
+    constructor(initialRpiCount?: number);
+    /**
+     * Ensure detection array is large enough for the given RPI ID
+     * @private
+     * @param rpiId - RPI ID to accommodate
+     */
+    private _ensureCapacity;
     /**
      * Update detection message from RPI
-     * @param {number} rpiId - RPI ID (0 or 1)
+     * @param {number} rpiId - RPI ID (0, 1, 2, etc.)
      * @param {PersonDetectionMessage} message - Detection message {isPerson, prob}
      */
     updateDetection(rpiId: number, message: PersonDetectionMessage): void;
     /**
      * Get detection message for specific RPI
-     * @param {number} rpiId - RPI ID (0 or 1)
+     * @param {number} rpiId - RPI ID (0, 1, 2, etc.)
      * @returns {PersonDetectionMessage} Detection message
      */
     getDetectionMessage(rpiId: number): PersonDetectionMessage;
@@ -50,6 +56,16 @@ declare class PersonDetectionState {
      * @returns {boolean} True if timer is active
      */
     isTimerActive(): boolean;
+    /**
+     * Get current number of active RPIs
+     * @returns {number} Number of active RPIs
+     */
+    getActiveRpiCount(): number;
+    /**
+     * Get all detection messages
+     * @returns {PersonDetectionMessage[]} Array of all detection messages
+     */
+    getAllDetectionMessages(): PersonDetectionMessage[];
 }
 export default PersonDetectionState;
 //# sourceMappingURL=PersonDetectionState.d.ts.map

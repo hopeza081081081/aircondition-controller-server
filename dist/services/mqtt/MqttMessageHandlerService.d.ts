@@ -2,9 +2,9 @@
  * MQTT Message Handler Service
  * Simple handler for processing MQTT messages and updating device state
  */
-import DeviceDataModel from '../../models/DeviceDataModel';
-import PersonDetectionState from '../../models/PersonDetectionState';
-import { CloudMqttService } from './CloudMqttService';
+import DeviceDataModel from "../../models/DeviceDataModel";
+import PersonDetectionState from "../../models/PersonDetectionState";
+import { CloudMqttService } from "./CloudMqttService";
 export declare class MqttMessageHandlerService {
     private deviceModel;
     private personDetectionState;

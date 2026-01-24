@@ -4,23 +4,23 @@
  */
 
 // Load environment variables first
-import * as dotenv from 'dotenv';
+import * as dotenv from "dotenv";
 dotenv.config();
 
-import config from './config';
-import Logger from './utils/Logger';
+import config from "./config";
+import Logger from "./utils/Logger";
 
 // Models
-import DeviceDataModel from './models/DeviceDataModel';
-import PersonDetectionState from './models/PersonDetectionState';
+import DeviceDataModel from "./models/DeviceDataModel";
+import PersonDetectionState from "./models/PersonDetectionState";
 
 // Services
-import { LocalMqttService } from './services/mqtt/LocalMqttService';
-import { CloudMqttService } from './services/mqtt/CloudMqttService';
-import { MqttMessageHandlerService } from './services/mqtt/MqttMessageHandlerService';
-import { PersonDetectionService } from './services/PersonDetectionService';
-import RaspberrypiService from './services/RaspberrypiService';
-import MongoDBService from './services/MongoDBService';
+import { LocalMqttService } from "./services/mqtt/LocalMqttService";
+import { CloudMqttService } from "./services/mqtt/CloudMqttService";
+import { MqttMessageHandlerService } from "./services/mqtt/MqttMessageHandlerService";
+import { PersonDetectionService } from "./services/PersonDetectionService";
+import RaspberrypiService from "./services/RaspberrypiService";
+import MongoDBService from "./services/MongoDBService";
 
 // Global instances
 let deviceModel: DeviceDataModel;
@@ -37,17 +37,17 @@ let mongoDBService: MongoDBService;
  */
 async function initialize(): Promise<void> {
   try {
-    Logger.info('========================================');
-    Logger.info('Air Conditioning Controller Server');
-    Logger.info('========================================');
+    Logger.info("========================================");
+    Logger.info("Air Conditioning Controller Server");
+    Logger.info("========================================");
 
     // Initialize models
-    Logger.info('Initializing models...');
+    Logger.info("Initializing models...");
     deviceModel = new DeviceDataModel(config);
     personDetectionState = new PersonDetectionState();
 
     // Initialize MQTT services
-    Logger.info('Initializing MQTT services...');
+    Logger.info("Initializing MQTT services...");
     localMqtt = new LocalMqttService(config.mqtt.local);
     cloudMqtt = new CloudMqttService(config.mqtt.cloud);
 
@@ -60,36 +60,40 @@ async function initialize(): Promise<void> {
       try {
         await localMqtt.setupSubscriptions(config.subscriptions);
       } catch (error) {
-        Logger.warn('Failed to setup MQTT subscriptions', error as Error);
+        Logger.warn("Failed to setup MQTT subscriptions", error as Error);
       }
     }
 
     // Initialize message handler
-    Logger.info('Initializing message handler...');
-    mqttMessageHandlerService = new MqttMessageHandlerService(deviceModel, personDetectionState, cloudMqtt);
+    Logger.info("Initializing message handler...");
+    mqttMessageHandlerService = new MqttMessageHandlerService(
+      deviceModel,
+      personDetectionState,
+      cloudMqtt,
+    );
 
     // Wire up MQTT message events only if local MQTT is connected
     if (localMqtt.isInitialized() && localMqtt.isConnected()) {
-      localMqtt.on('message', (topic: string, message: Buffer) => {
+      localMqtt.on("message", (topic: string, message: Buffer) => {
         mqttMessageHandlerService.handle(topic, message);
       });
-      Logger.info('Local MQTT message handler registered');
+      Logger.info("Local MQTT message handler registered");
     } else {
-      Logger.warn('Local MQTT not connected - message handling disabled');
+      Logger.warn("Local MQTT not connected - message handling disabled");
     }
 
     // Initialize person detection service
-    Logger.info('Initializing person detection service...');
+    Logger.info("Initializing person detection service...");
     personDetectionService = new PersonDetectionService(
       personDetectionState,
       deviceModel,
       localMqtt,
       cloudMqtt,
-      config
+      config,
     );
 
     // Initialize MongoDB service (non-blocking)
-    Logger.info('Initializing MongoDB service...');
+    Logger.info("Initializing MongoDB service...");
     mongoDBService = new MongoDBService();
 
     try {
@@ -97,40 +101,48 @@ async function initialize(): Promise<void> {
 
       // Start periodic data saving
       mongoDBService.startPeriodicSaving(() => deviceModel.getDeviceState());
-      Logger.info('MongoDB periodic saving started');
+      Logger.info("MongoDB periodic saving started");
     } catch (error) {
-      Logger.error('Failed to connect to MongoDB, but application will continue', error as Error);
-      Logger.warn('MongoDB features will be disabled');
+      Logger.error(
+        "Failed to connect to MongoDB, but application will continue",
+        error as Error,
+      );
+      Logger.warn("MongoDB features will be disabled");
     }
 
     // Initialize device controller
-    Logger.info('Initializing device controller...');
+    Logger.info("Initializing device controller...");
     raspberrypiService = new RaspberrypiService(
       deviceModel,
       personDetectionService,
       localMqtt,
       cloudMqtt,
-      config
+      config,
     );
 
     // Start device controller
     raspberrypiService.start();
 
-    Logger.info('========================================');
-    Logger.info('Application started successfully');
-    Logger.info('========================================');
-    Logger.info('MQTT Status:');
-    Logger.info(`  Local MQTT: ${localMqtt.isInitialized() ? '✓ Connected' : '✗ Disconnected (will retry in background)'}`);
-    Logger.info(`  Cloud MQTT: ${cloudMqtt.isInitialized() ? '✓ Connected' : '✗ Disconnected (will retry in background)'}`);
-    Logger.info('MongoDB Status:');
-    Logger.info(`  MongoDB: ${mongoDBService.isConnectionActive() ? '✓ Connected' : '✗ Disconnected (data saving disabled)'}`);
-    Logger.info('========================================');
+    Logger.info("========================================");
+    Logger.info("Application started successfully");
+    Logger.info("========================================");
+    Logger.info("MQTT Status:");
+    Logger.info(
+      `  Local MQTT: ${localMqtt.isInitialized() ? "✓ Connected" : "✗ Disconnected (will retry in background)"}`,
+    );
+    Logger.info(
+      `  Cloud MQTT: ${cloudMqtt.isInitialized() ? "✓ Connected" : "✗ Disconnected (will retry in background)"}`,
+    );
+    Logger.info("MongoDB Status:");
+    Logger.info(
+      `  MongoDB: ${mongoDBService.isConnectionActive() ? "✓ Connected" : "✗ Disconnected (data saving disabled)"}`,
+    );
+    Logger.info("========================================");
 
     // Setup graceful shutdown
     setupGracefulShutdown();
-
   } catch (error) {
-    Logger.error('Failed to initialize application', error as Error);
+    Logger.error("Failed to initialize application", error as Error);
     process.exit(1);
   }
 }
@@ -146,18 +158,22 @@ function setupGracefulShutdown(): void {
       // Stop device controller
       if (raspberrypiService) {
         raspberrypiService.stop();
-        Logger.info('Device controller stopped');
+        Logger.info("Device controller stopped");
       }
 
       // Publish offline status to MQTT
       if (localMqtt && localMqtt.isConnected()) {
-        await localMqtt.publishOnlineStatus('false');
-        Logger.info('Published offline status to local MQTT');
+        await localMqtt.publishOnlineStatus("false");
+        Logger.info("Published offline status to local MQTT");
       }
 
       if (cloudMqtt && cloudMqtt.isConnected()) {
-        await cloudMqtt.publish('myFinalProject/server/properties/online', 'false', { qos: 2, retain: true });
-        Logger.info('Published offline status to cloud MQTT');
+        await cloudMqtt.publish(
+          "myFinalProject/server/properties/online",
+          "false",
+          { qos: 2, retain: true },
+        );
+        Logger.info("Published offline status to cloud MQTT");
       }
 
       // Disconnect MQTT
@@ -173,31 +189,31 @@ function setupGracefulShutdown(): void {
       if (mongoDBService) {
         await mongoDBService.stopPeriodicSaving();
         await mongoDBService.disconnect();
-        Logger.info('MongoDB service stopped');
+        Logger.info("MongoDB service stopped");
       }
 
-      Logger.info('Shutdown complete');
+      Logger.info("Shutdown complete");
       process.exit(0);
     } catch (error) {
-      Logger.error('Error during shutdown', error as Error);
+      Logger.error("Error during shutdown", error as Error);
       process.exit(1);
     }
   };
 
   // Handle signals
-  process.on('SIGINT', () => shutdown('SIGINT'));
-  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on("SIGINT", () => shutdown("SIGINT"));
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
 
   // Handle uncaught exceptions
-  process.on('uncaughtException', (error: Error) => {
-    Logger.error('Uncaught exception', error);
-    shutdown('uncaughtException');
+  process.on("uncaughtException", (error: Error) => {
+    Logger.error("Uncaught exception", error);
+    shutdown("uncaughtException");
   });
 
   // Handle unhandled promise rejections
-  process.on('unhandledRejection', (reason: unknown) => {
-    Logger.error('Unhandled promise rejection', reason as Error);
-    shutdown('unhandledRejection');
+  process.on("unhandledRejection", (reason: unknown) => {
+    Logger.error("Unhandled promise rejection", reason as Error);
+    shutdown("unhandledRejection");
   });
 }
 

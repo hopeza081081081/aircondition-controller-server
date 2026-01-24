@@ -56,7 +56,7 @@ export interface DeviceDataState {
     server: {
         online: boolean;
     };
-    rpi: [RPIState, RPIState];
+    rpi: RPIState[];
     airconController: [AirconController, AirconController, AirconController];
     lightingController: [LightingController];
 }
@@ -66,7 +66,7 @@ export interface PersonDetectionMessage {
 }
 export interface DetectionState {
     isPersonDetected: boolean;
-    detectionMessages: [PersonDetectionMessage, PersonDetectionMessage];
+    detectionMessages: PersonDetectionMessage[];
     shutdownTimer: NodeJS.Timeout | null;
 }
 export interface SubscriptionConfig {

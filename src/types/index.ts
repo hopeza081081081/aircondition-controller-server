@@ -69,7 +69,7 @@ export interface DeviceDataState {
   server: {
     online: boolean;
   };
-  rpi: [RPIState, RPIState];
+  rpi: RPIState[]; // Dynamic array to support any number of RPIs
   airconController: [AirconController, AirconController, AirconController];
   lightingController: [LightingController];
 }
@@ -83,7 +83,7 @@ export interface PersonDetectionMessage {
 
 export interface DetectionState {
   isPersonDetected: boolean;
-  detectionMessages: [PersonDetectionMessage, PersonDetectionMessage];
+  detectionMessages: PersonDetectionMessage[]; // Dynamic array to support any number of RPIs
   shutdownTimer: NodeJS.Timeout | null;
 }
 

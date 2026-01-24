@@ -38,23 +38,42 @@ class DeviceDataModel {
     }
     /**
      * Update RPI state
-     * @param {number} id - RPI ID (0 or 1)
+     * @param {number} id - RPI ID (0, 1, 2, etc.)
      * @param {Partial<RPIState>} data - Data to update
      */
     updateRpiState(id, data) {
-        if (id < 0 || id >= this.state.rpi.length) {
-            Logger.warn(`Invalid RPI ID: ${id}`);
-            return;
-        }
+        this._ensureRpiCapacity(id);
         Object.assign(this.state.rpi[id], data);
         Logger.debug(`RPI${id + 1} state updated`, data);
     }
     /**
+     * Ensure RPI array is large enough for the given ID
+     * @private
+     * @param id - RPI ID to accommodate
+     */
+    _ensureRpiCapacity(id) {
+        if (id >= this.state.rpi.length) {
+            const oldLength = this.state.rpi.length;
+            // Expand array with default RPI states
+            for (let i = this.state.rpi.length; i <= id; i++) {
+                this.state.rpi.push({
+                    online: false,
+                    isperson: false,
+                    prob: 0.0
+                });
+            }
+            Logger.info(`RPI array expanded from ${oldLength} to ${this.state.rpi.length}`, {
+                newRpiCount: this.state.rpi.length
+            });
+        }
+    }
+    /**
      * Update RPI detection data
-     * @param {number} id - RPI ID (0 or 1)
+     * @param {number} id - RPI ID (0, 1, 2, etc.)
      * @param {PersonDetectionMessage} detection - Detection data {isPerson, prob}
      */
     updateRpiDetection(id, detection) {
+        this._ensureRpiCapacity(id);
         this.updateRpiState(id, {
             isperson: detection.isPerson,
             prob: detection.prob
@@ -62,9 +81,10 @@ class DeviceDataModel {
     }
     /**
      * Reset RPI state when offline
-     * @param {number} id - RPI ID (0 or 1)
+     * @param {number} id - RPI ID (0, 1, 2, etc.)
      */
     resetRpiState(id) {
+        this._ensureRpiCapacity(id);
         this.updateRpiState(id, {
             online: false,
             isperson: false,

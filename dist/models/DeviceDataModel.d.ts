@@ -23,13 +23,19 @@ declare class DeviceDataModel {
     setMqttBrokerState(status: boolean): void;
     /**
      * Update RPI state
-     * @param {number} id - RPI ID (0 or 1)
+     * @param {number} id - RPI ID (0, 1, 2, etc.)
      * @param {Partial<RPIState>} data - Data to update
      */
     updateRpiState(id: number, data: Partial<RPIState>): void;
     /**
+     * Ensure RPI array is large enough for the given ID
+     * @private
+     * @param id - RPI ID to accommodate
+     */
+    private _ensureRpiCapacity;
+    /**
      * Update RPI detection data
-     * @param {number} id - RPI ID (0 or 1)
+     * @param {number} id - RPI ID (0, 1, 2, etc.)
      * @param {PersonDetectionMessage} detection - Detection data {isPerson, prob}
      */
     updateRpiDetection(id: number, detection: {
@@ -38,7 +44,7 @@ declare class DeviceDataModel {
     }): void;
     /**
      * Reset RPI state when offline
-     * @param {number} id - RPI ID (0 or 1)
+     * @param {number} id - RPI ID (0, 1, 2, etc.)
      */
     resetRpiState(id: number): void;
     /**

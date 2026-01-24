@@ -37,15 +37,17 @@ export class PersonDetectionService {
    */
   public async execute(): Promise<void> {
     try {
-      const rpi1Detected = this.personDetectionState.getDetectionMessage(0);
-      const rpi2Detected = this.personDetectionState.getDetectionMessage(1);
+      const detections = this.personDetectionState.getAllDetectionMessages();
+
+      // Check if any RPI detected a person
+      const anyPersonDetected = detections.some(detection => detection.isPerson);
 
       // No person detected by any RPI
-      if (!rpi1Detected.isPerson && !rpi2Detected.isPerson) {
+      if (!anyPersonDetected) {
         await this._handleNoPersonDetected();
       }
       // Person detected by at least one RPI
-      else if (rpi1Detected.isPerson || rpi2Detected.isPerson) {
+      else {
         await this._handlePersonDetected();
       }
     } catch (error) {
