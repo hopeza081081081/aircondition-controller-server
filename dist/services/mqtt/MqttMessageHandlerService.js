@@ -3,14 +3,19 @@
  * MQTT Message Handler Service
  * Simple handler for processing MQTT messages and updating device state
  */
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MqttMessageHandlerService = void 0;
+const RpiTopicMapper_1 = __importDefault(require("../../utils/RpiTopicMapper"));
 const Logger = require('../../utils/Logger');
 class MqttMessageHandlerService {
     constructor(deviceModel, personDetectionState, cloudMqtt) {
         this.deviceModel = deviceModel;
         this.personDetectionState = personDetectionState;
         this.cloudMqtt = cloudMqtt;
+        this.rpiMapper = new RpiTopicMapper_1.default(); // Initialize with default mappings (rpi1, rpi2)
         Logger.info('MqttMessageHandlerService initialized');
     }
     /**
@@ -118,10 +123,14 @@ class MqttMessageHandlerService {
      * Extract RPI ID from topic
      * @private
      * @param topic - MQTT topic
-     * @returns RPI index (0 or 1)
+     * @returns RPI index (0, 1, etc.) or -1 if not found
+     *
+     * Supports formats:
+     * - Legacy: myFinalProject/rpi1/objDetector -> 0
+     * - New: myFinalProject/rpi_B827EB400668/objDetector -> mapped index
      */
     _getRpiId(topic) {
-        return topic.includes('/rpi1/') ? 0 : 1;
+        return this.rpiMapper.getRpiId(topic);
     }
     /**
      * Extract Aircon Controller ID from topic

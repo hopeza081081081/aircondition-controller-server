@@ -6,17 +6,20 @@
 import DeviceDataModel from '../../models/DeviceDataModel';
 import PersonDetectionState from '../../models/PersonDetectionState';
 import { CloudMqttService } from './CloudMqttService';
+import RpiTopicMapper from '../../utils/RpiTopicMapper';
 const Logger = require('../../utils/Logger');
 
 export class MqttMessageHandlerService {
   private deviceModel: DeviceDataModel;
   private personDetectionState: PersonDetectionState;
   private cloudMqtt: CloudMqttService;
+  private rpiMapper: RpiTopicMapper;
 
   constructor(deviceModel: DeviceDataModel, personDetectionState: PersonDetectionState, cloudMqtt: CloudMqttService) {
     this.deviceModel = deviceModel;
     this.personDetectionState = personDetectionState;
     this.cloudMqtt = cloudMqtt;
+    this.rpiMapper = new RpiTopicMapper(); // Initialize with default mappings (rpi1, rpi2)
     Logger.info('MqttMessageHandlerService initialized');
   }
 
@@ -129,10 +132,14 @@ export class MqttMessageHandlerService {
    * Extract RPI ID from topic
    * @private
    * @param topic - MQTT topic
-   * @returns RPI index (0 or 1)
+   * @returns RPI index (0, 1, etc.) or -1 if not found
+   *
+   * Supports formats:
+   * - Legacy: myFinalProject/rpi1/objDetector -> 0
+   * - New: myFinalProject/rpi_B827EB400668/objDetector -> mapped index
    */
   private _getRpiId(topic: string): number {
-    return topic.includes('/rpi1/') ? 0 : 1;
+    return this.rpiMapper.getRpiId(topic);
   }
 
   /**

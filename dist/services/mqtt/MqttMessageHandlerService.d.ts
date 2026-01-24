@@ -9,6 +9,7 @@ export declare class MqttMessageHandlerService {
     private deviceModel;
     private personDetectionState;
     private cloudMqtt;
+    private rpiMapper;
     constructor(deviceModel: DeviceDataModel, personDetectionState: PersonDetectionState, cloudMqtt: CloudMqttService);
     /**
      * Handle incoming MQTT message
@@ -34,7 +35,11 @@ export declare class MqttMessageHandlerService {
      * Extract RPI ID from topic
      * @private
      * @param topic - MQTT topic
-     * @returns RPI index (0 or 1)
+     * @returns RPI index (0, 1, etc.) or -1 if not found
+     *
+     * Supports formats:
+     * - Legacy: myFinalProject/rpi1/objDetector -> 0
+     * - New: myFinalProject/rpi_B827EB400668/objDetector -> mapped index
      */
     private _getRpiId;
     /**

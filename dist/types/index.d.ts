@@ -129,4 +129,8 @@ export interface PublishOptions {
 export interface LoggerOptions {
     level: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
 }
+export interface RpiMappingConfig {
+    identifier: string;
+    index: number;
+}
 //# sourceMappingURL=index.d.ts.map

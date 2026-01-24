@@ -155,3 +155,10 @@ export interface PublishOptions {
 export interface LoggerOptions {
   level: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
 }
+
+// ==================== RPI Mapping Types ====================
+
+export interface RpiMappingConfig {
+  identifier: string; // e.g., 'rpi1', 'rpi_B827EB400668'
+  index: number; // 0, 1, etc.
+}
