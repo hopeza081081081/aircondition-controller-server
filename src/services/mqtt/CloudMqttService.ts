@@ -10,10 +10,12 @@ const Logger = require('../../utils/Logger');
 
 export class CloudMqttService extends MqttClient {
   private initialized: boolean;
+  private reconnectInterval: NodeJS.Timeout | null;
 
   constructor(config: MqttConfig) {
     super(config, 'CloudMQTT');
     this.initialized = false;
+    this.reconnectInterval = null;
   }
 
   /**
@@ -44,9 +46,15 @@ export class CloudMqttService extends MqttClient {
    * @private
    */
   private _startReconnectLoop(): void {
-    const reconnectInterval = setInterval(async () => {
+    // Clear existing interval if any (prevent memory leak)
+    if (this.reconnectInterval) {
+      clearInterval(this.reconnectInterval);
+      Logger.debug('CloudMQTT - Cleared previous reconnect interval');
+    }
+
+    this.reconnectInterval = setInterval(async () => {
       if (this.isConnected()) {
-        clearInterval(reconnectInterval);
+        this._clearReconnectInterval();
         Logger.info('CloudMQTT - Reconnected successfully');
         this.initialized = true;
         return;
@@ -57,12 +65,35 @@ export class CloudMqttService extends MqttClient {
         await this.connect();
         await this.publishOnlineStatus('true');
         this.initialized = true;
-        clearInterval(reconnectInterval);
+        this._clearReconnectInterval();
         Logger.info('CloudMQTT - Reconnected and initialized');
       } catch (error) {
         Logger.warn('CloudMQTT - Reconnection attempt failed', error as Error);
       }
     }, 30000); // Try every 30 seconds
+
+    Logger.debug('CloudMQTT - Reconnect loop started');
+  }
+
+  /**
+   * Clear reconnect interval
+   * @private
+   */
+  private _clearReconnectInterval(): void {
+    if (this.reconnectInterval) {
+      clearInterval(this.reconnectInterval);
+      this.reconnectInterval = null;
+      Logger.debug('CloudMQTT - Reconnect interval cleared');
+    }
+  }
+
+  /**
+   * Disconnect and cleanup
+   */
+  public disconnect(): void {
+    this._clearReconnectInterval();
+    super.disconnect();
+    Logger.info('CloudMQTT - Disconnected and cleaned up');
   }
 
   /**

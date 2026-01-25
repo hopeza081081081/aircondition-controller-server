@@ -12,6 +12,7 @@ class CloudMqttService extends MqttClient_1.MqttClient {
     constructor(config) {
         super(config, 'CloudMQTT');
         this.initialized = false;
+        this.reconnectInterval = null;
     }
     /**
      * Initialize cloud MQTT service (non-blocking)
@@ -38,9 +39,14 @@ class CloudMqttService extends MqttClient_1.MqttClient {
      * @private
      */
     _startReconnectLoop() {
-        const reconnectInterval = setInterval(async () => {
+        // Clear existing interval if any (prevent memory leak)
+        if (this.reconnectInterval) {
+            clearInterval(this.reconnectInterval);
+            Logger.debug('CloudMQTT - Cleared previous reconnect interval');
+        }
+        this.reconnectInterval = setInterval(async () => {
             if (this.isConnected()) {
-                clearInterval(reconnectInterval);
+                this._clearReconnectInterval();
                 Logger.info('CloudMQTT - Reconnected successfully');
                 this.initialized = true;
                 return;
@@ -50,13 +56,33 @@ class CloudMqttService extends MqttClient_1.MqttClient {
                 await this.connect();
                 await this.publishOnlineStatus('true');
                 this.initialized = true;
-                clearInterval(reconnectInterval);
+                this._clearReconnectInterval();
                 Logger.info('CloudMQTT - Reconnected and initialized');
             }
             catch (error) {
                 Logger.warn('CloudMQTT - Reconnection attempt failed', error);
             }
         }, 30000); // Try every 30 seconds
+        Logger.debug('CloudMQTT - Reconnect loop started');
+    }
+    /**
+     * Clear reconnect interval
+     * @private
+     */
+    _clearReconnectInterval() {
+        if (this.reconnectInterval) {
+            clearInterval(this.reconnectInterval);
+            this.reconnectInterval = null;
+            Logger.debug('CloudMQTT - Reconnect interval cleared');
+        }
+    }
+    /**
+     * Disconnect and cleanup
+     */
+    disconnect() {
+        this._clearReconnectInterval();
+        super.disconnect();
+        Logger.info('CloudMQTT - Disconnected and cleaned up');
     }
     /**
      * Publish online status to cloud

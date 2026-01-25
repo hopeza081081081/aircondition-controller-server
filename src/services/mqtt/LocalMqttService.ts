@@ -9,10 +9,12 @@ const Logger = require('../../utils/Logger');
 
 export class LocalMqttService extends MqttClient {
   private initialized: boolean;
+  private reconnectInterval: NodeJS.Timeout | null;
 
   constructor(config: MqttConfig) {
     super(config, 'LocalMQTT');
     this.initialized = false;
+    this.reconnectInterval = null;
   }
 
   /**
@@ -48,9 +50,15 @@ export class LocalMqttService extends MqttClient {
    * @private
    */
   private _startReconnectLoop(): void {
-    const reconnectInterval = setInterval(async () => {
+    // Clear existing interval if any (prevent memory leak)
+    if (this.reconnectInterval) {
+      clearInterval(this.reconnectInterval);
+      Logger.debug('LocalMQTT - Cleared previous reconnect interval');
+    }
+
+    this.reconnectInterval = setInterval(async () => {
       if (this.isConnected()) {
-        clearInterval(reconnectInterval);
+        this._clearReconnectInterval();
         Logger.info('LocalMQTT - Reconnected successfully');
         this.initialized = true;
         return;
@@ -64,12 +72,35 @@ export class LocalMqttService extends MqttClient {
           await this.publishCommand(i, 'false');
         }
         this.initialized = true;
-        clearInterval(reconnectInterval);
+        this._clearReconnectInterval();
         Logger.info('LocalMQTT - Reconnected and initialized');
       } catch (error) {
         Logger.warn('LocalMQTT - Reconnection attempt failed', error as Error);
       }
     }, 30000); // Try every 30 seconds
+
+    Logger.debug('LocalMQTT - Reconnect loop started');
+  }
+
+  /**
+   * Clear reconnect interval
+   * @private
+   */
+  private _clearReconnectInterval(): void {
+    if (this.reconnectInterval) {
+      clearInterval(this.reconnectInterval);
+      this.reconnectInterval = null;
+      Logger.debug('LocalMQTT - Reconnect interval cleared');
+    }
+  }
+
+  /**
+   * Disconnect and cleanup
+   */
+  public disconnect(): void {
+    this._clearReconnectInterval();
+    super.disconnect();
+    Logger.info('LocalMQTT - Disconnected and cleaned up');
   }
 
   /**

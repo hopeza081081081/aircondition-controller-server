@@ -11,6 +11,7 @@ class LocalMqttService extends MqttClient_1.MqttClient {
     constructor(config) {
         super(config, 'LocalMQTT');
         this.initialized = false;
+        this.reconnectInterval = null;
     }
     /**
      * Initialize local MQTT service (non-blocking)
@@ -41,9 +42,14 @@ class LocalMqttService extends MqttClient_1.MqttClient {
      * @private
      */
     _startReconnectLoop() {
-        const reconnectInterval = setInterval(async () => {
+        // Clear existing interval if any (prevent memory leak)
+        if (this.reconnectInterval) {
+            clearInterval(this.reconnectInterval);
+            Logger.debug('LocalMQTT - Cleared previous reconnect interval');
+        }
+        this.reconnectInterval = setInterval(async () => {
             if (this.isConnected()) {
-                clearInterval(reconnectInterval);
+                this._clearReconnectInterval();
                 Logger.info('LocalMQTT - Reconnected successfully');
                 this.initialized = true;
                 return;
@@ -56,13 +62,33 @@ class LocalMqttService extends MqttClient_1.MqttClient {
                     await this.publishCommand(i, 'false');
                 }
                 this.initialized = true;
-                clearInterval(reconnectInterval);
+                this._clearReconnectInterval();
                 Logger.info('LocalMQTT - Reconnected and initialized');
             }
             catch (error) {
                 Logger.warn('LocalMQTT - Reconnection attempt failed', error);
             }
         }, 30000); // Try every 30 seconds
+        Logger.debug('LocalMQTT - Reconnect loop started');
+    }
+    /**
+     * Clear reconnect interval
+     * @private
+     */
+    _clearReconnectInterval() {
+        if (this.reconnectInterval) {
+            clearInterval(this.reconnectInterval);
+            this.reconnectInterval = null;
+            Logger.debug('LocalMQTT - Reconnect interval cleared');
+        }
+    }
+    /**
+     * Disconnect and cleanup
+     */
+    disconnect() {
+        this._clearReconnectInterval();
+        super.disconnect();
+        Logger.info('LocalMQTT - Disconnected and cleaned up');
     }
     /**
      * Publish server online status

@@ -7,6 +7,7 @@ import { MqttClient } from './MqttClient';
 import { MqttConfig } from '../../types';
 export declare class CloudMqttService extends MqttClient {
     private initialized;
+    private reconnectInterval;
     constructor(config: MqttConfig);
     /**
      * Initialize cloud MQTT service (non-blocking)
@@ -18,6 +19,15 @@ export declare class CloudMqttService extends MqttClient {
      * @private
      */
     private _startReconnectLoop;
+    /**
+     * Clear reconnect interval
+     * @private
+     */
+    private _clearReconnectInterval;
+    /**
+     * Disconnect and cleanup
+     */
+    disconnect(): void;
     /**
      * Publish online status to cloud
      * @param status - 'true' or 'false'
