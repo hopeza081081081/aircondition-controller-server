@@ -29,6 +29,17 @@ export class MqttClient {
    */
   public async connect(): Promise<void> {
     return new Promise((resolve, reject) => {
+      // Clean up existing client if any (prevent memory leak)
+      if (this.client) {
+        Logger.debug(`${this.clientName} - Cleaning up existing client before reconnect`);
+        try {
+          this.client.end(true); // Force close without waiting for disconnect packet
+        } catch (error) {
+          Logger.warn(`${this.clientName} - Error cleaning up existing client`, error as Error);
+        }
+        this.client = null;
+      }
+
       Logger.info(`${this.clientName} - Connecting to MQTT broker`, {
         host: this.config.host,
         port: this.config.port
@@ -36,6 +47,7 @@ export class MqttClient {
 
       this.client = mqtt.connect(this.config);
 
+      // Register event handlers for this connection attempt
       this.client.on('connect', () => {
         Logger.info(`${this.clientName} - Connected to MQTT broker`);
         resolve();
