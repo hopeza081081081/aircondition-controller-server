@@ -70,8 +70,8 @@ export interface DeviceDataState {
     online: boolean;
   };
   rpi: RPIState[]; // Dynamic array to support any number of RPIs
-  airconController: [AirconController, AirconController, AirconController];
-  lightingController: [LightingController];
+  airconController: AirconController[]; // Dynamic array to support any number of aircon controllers
+  lightingController: LightingController[]; // Dynamic array to support any number of lighting controllers
 }
 
 // ==================== Person Detection Types ====================
@@ -161,4 +161,11 @@ export interface LoggerOptions {
 export interface RpiMappingConfig {
   identifier: string; // e.g., 'rpi1', 'rpi_B827EB400668'
   index: number; // 0, 1, etc.
+}
+
+// ==================== Aircon Controller Mapping Types ====================
+
+export interface AirconMappingConfig {
+  identifier: string; // e.g., 'airconController1', 'aircon_8CAAB5936934'
+  index: number; // 0, 1, 2, etc.
 }

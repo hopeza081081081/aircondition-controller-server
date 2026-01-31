@@ -40,63 +40,38 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.MongoDBService = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
 const Logger = require('../utils/Logger');
-// MongoDB Schema
+// MongoDB Schema - Dynamic arrays to support any number of devices
 const deviceDataSchema = new mongoose_1.Schema({
     timeStamp: Date,
     MQTTbroker: { online: Boolean },
     server: { online: Boolean },
-    rpi: [
-        {
+    rpi: [{
             online: Boolean,
             isperson: Boolean,
             prob: Number
-        },
-        {
-            online: Boolean,
-            isperson: Boolean,
-            prob: Number
-        }
-    ],
-    airconController: [
-        {
+        }],
+    airconController: [{
             controllercmd: Boolean,
             properties: { wifiLocalIP: String, online: Boolean, bootcount: Number },
-            voltage: Number,
-            current: Number,
-            power: Number,
-            energy: Number,
-            frequency: Number
-        },
-        {
+            measure: {
+                voltage: { type: Number, default: null },
+                current: { type: Number, default: null },
+                power: { type: Number, default: null },
+                energy: { type: Number, default: null },
+                frequency: { type: Number, default: null }
+            }
+        }],
+    lightingController: [{
             controllercmd: Boolean,
             properties: { wifiLocalIP: String, online: Boolean, bootcount: Number },
-            voltage: Number,
-            current: Number,
-            power: Number,
-            energy: Number,
-            frequency: Number
-        },
-        {
-            controllercmd: Boolean,
-            properties: { wifiLocalIP: String, online: Boolean, bootcount: Number },
-            voltage: Number,
-            current: Number,
-            power: Number,
-            energy: Number,
-            frequency: Number
-        }
-    ],
-    lightingController: [
-        {
-            controllercmd: Boolean,
-            properties: { wifiLocalIP: String, online: Boolean, bootcount: Number },
-            voltage: Number,
-            current: Number,
-            power: Number,
-            energy: Number,
-            frequency: Number
-        }
-    ]
+            measure: {
+                voltage: { type: Number, default: null },
+                current: { type: Number, default: null },
+                power: { type: Number, default: null },
+                energy: { type: Number, default: null },
+                frequency: { type: Number, default: null }
+            }
+        }]
 });
 const DeviceData = mongoose_1.default.model('iotdevicedatas', deviceDataSchema);
 class MongoDBService {

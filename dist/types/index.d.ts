@@ -57,8 +57,8 @@ export interface DeviceDataState {
         online: boolean;
     };
     rpi: RPIState[];
-    airconController: [AirconController, AirconController, AirconController];
-    lightingController: [LightingController];
+    airconController: AirconController[];
+    lightingController: LightingController[];
 }
 export interface PersonDetectionMessage {
     isPerson: boolean;
@@ -130,6 +130,10 @@ export interface LoggerOptions {
     level: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
 }
 export interface RpiMappingConfig {
+    identifier: string;
+    index: number;
+}
+export interface AirconMappingConfig {
     identifier: string;
     index: number;
 }

@@ -106,47 +106,70 @@ class DeviceDataModel {
   }
 
   /**
+   * Ensure aircon controller array is large enough for the given ID
+   * @private
+   * @param id - Controller ID to accommodate
+   */
+  private _ensureAirconCapacity(id: number): void {
+    if (id >= this.state.airconController.length) {
+      const oldLength = this.state.airconController.length;
+      // Expand array with default aircon controller states
+      for (let i = this.state.airconController.length; i <= id; i++) {
+        this.state.airconController.push({
+          controllercmd: false,
+          properties: {
+            wifiLocalIP: '',
+            online: false,
+            bootcount: 0
+          },
+          measure: {
+            voltage: null,
+            current: null,
+            power: null,
+            energy: null,
+            frequency: null
+          }
+        });
+      }
+      Logger.info(`Aircon controller array expanded from ${oldLength} to ${this.state.airconController.length}`, {
+        newControllerCount: this.state.airconController.length
+      });
+    }
+  }
+
+  /**
    * Update aircon controller properties
-   * @param {number} id - Controller ID (0, 1, or 2)
+   * @param {number} id - Controller ID (0, 1, 2, etc.)
    * @param {{ wifiLocalIP: string; online: boolean; bootcount: number }} properties - Properties to update
    */
   public updateAirconProperties(
     id: number,
     properties: { wifiLocalIP: string; online: boolean; bootcount: number }
   ): void {
-    if (id < 0 || id >= this.state.airconController.length) {
-      Logger.warn(`Invalid Aircon controller ID: ${id}`);
-      return;
-    }
+    this._ensureAirconCapacity(id);
 
     Object.assign(this.state.airconController[id].properties, properties);
-    Logger.debug(`Aircon controller ${id + 1} properties updated`, properties);
+    Logger.debug(`Aircon controller ${id} properties updated`, properties);
   }
 
   /**
    * Update aircon controller measure data
-   * @param {number} id - Controller ID (0, 1, or 2)
+   * @param {number} id - Controller ID (0, 1, 2, etc.)
    * @param {AirconMeasure} measure - Measurement data
    */
   public updateAirconMeasure(id: number, measure: AirconMeasure): void {
-    if (id < 0 || id >= this.state.airconController.length) {
-      Logger.warn(`Invalid Aircon controller ID: ${id}`);
-      return;
-    }
+    this._ensureAirconCapacity(id);
 
     this.state.airconController[id].measure = measure;
-    Logger.debug(`Aircon controller ${id + 1} measure updated`, measure);
+    Logger.debug(`Aircon controller ${id} measure updated`, measure);
   }
 
   /**
    * Reset aircon measurements when offline
-   * @param {number} id - Controller ID (0, 1, or 2)
+   * @param {number} id - Controller ID (0, 1, 2, etc.)
    */
   public resetAirconMeasure(id: number): void {
-    if (id < 0 || id >= this.state.airconController.length) {
-      Logger.warn(`Invalid Aircon controller ID: ${id}`);
-      return;
-    }
+    this._ensureAirconCapacity(id);
 
     this.state.airconController[id].measure = {
       voltage: null,
@@ -156,22 +179,19 @@ class DeviceDataModel {
       frequency: null
     };
 
-    Logger.debug(`Aircon controller ${id + 1} measurements reset`);
+    Logger.debug(`Aircon controller ${id} measurements reset`);
   }
 
   /**
    * Set aircon controller command
-   * @param {number} id - Controller ID (0, 1, or 2)
+   * @param {number} id - Controller ID (0, 1, 2, etc.)
    * @param {boolean} command - Command state (true=on, false=off)
    */
   public setAirconCommand(id: number, command: boolean): void {
-    if (id < 0 || id >= this.state.airconController.length) {
-      Logger.warn(`Invalid Aircon controller ID: ${id}`);
-      return;
-    }
+    this._ensureAirconCapacity(id);
 
     this.state.airconController[id].controllercmd = command;
-    Logger.debug(`Aircon controller ${id + 1} command set to ${command}`);
+    Logger.debug(`Aircon controller ${id} command set to ${command}`);
   }
 
   /**

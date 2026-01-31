@@ -3,15 +3,20 @@
  * Local MQTT Service
  * Manages local MQTT broker connection
  */
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LocalMqttService = void 0;
 const MqttClient_1 = require("./MqttClient");
+const AirconTopicMapper_1 = __importDefault(require("../../utils/AirconTopicMapper"));
 const Logger = require('../../utils/Logger');
 class LocalMqttService extends MqttClient_1.MqttClient {
-    constructor(config) {
+    constructor(config, airconConfig) {
         super(config, 'LocalMQTT');
         this.initialized = false;
         this.reconnectInterval = null;
+        this.airconMapper = new AirconTopicMapper_1.default(airconConfig);
     }
     /**
      * Initialize local MQTT service (non-blocking)
@@ -105,22 +110,29 @@ class LocalMqttService extends MqttClient_1.MqttClient {
     }
     /**
      * Publish command to aircon controller with retry
-     * @param controllerId - Controller ID (1, 2, or 3)
+     * @param controllerId - Controller ID (0, 1, or 2 - internal index)
      * @param command - Command ('true' or 'false')
      */
     async publishCommand(controllerId, command) {
-        const topic = `myFinalProject/server/electricalAppliances/airconController${controllerId}/command`;
+        // Get the identifier for this controller (e.g., 'aircon_8CAAB5936934')
+        const identifier = this.airconMapper.getIdentifier(controllerId);
+        if (!identifier) {
+            Logger.error(`LocalMQTT - No identifier found for controller index ${controllerId}`);
+            return;
+        }
+        // Use new topic format: myFinalProject/server/airconController/aircon_XXXX/command
+        const topic = `myFinalProject/server/airconController/${identifier}/command`;
         const maxRetries = 3;
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
                 await this.publish(topic, command, { qos: 2, retain: true });
-                Logger.debug(`LocalMQTT - Command sent to controller ${controllerId}: ${command}`);
+                Logger.debug(`LocalMQTT - Command sent to controller ${identifier} (index ${controllerId}): ${command}`);
                 return;
             }
             catch (error) {
-                Logger.warn(`LocalMQTT - Publish attempt ${attempt} failed for controller ${controllerId}`, error);
+                Logger.warn(`LocalMQTT - Publish attempt ${attempt} failed for controller ${identifier}`, error);
                 if (attempt === maxRetries) {
-                    Logger.error(`LocalMQTT - Failed to publish command to controller ${controllerId} after ${maxRetries} attempts`, error);
+                    Logger.error(`LocalMQTT - Failed to publish command to controller ${identifier} after ${maxRetries} attempts`, error);
                     return; // Don't throw - allow system to continue
                 }
                 // Wait before retry (exponential backoff)
@@ -148,6 +160,22 @@ class LocalMqttService extends MqttClient_1.MqttClient {
      */
     isInitialized() {
         return this.initialized;
+    }
+    /**
+     * Get aircon controller identifier by index
+     * @param controllerId - Controller index (0, 1, 2, etc.)
+     * @returns Identifier string (e.g., 'aircon_8CAAB5936934') or empty string if not found
+     */
+    getAirconIdentifier(controllerId) {
+        return this.airconMapper.getIdentifier(controllerId);
+    }
+    /**
+     * Get aircon controller index from topic
+     * @param topic - MQTT topic string
+     * @returns Controller index (0, 1, 2, etc.) or -1 if not found
+     */
+    getAirconControllerId(topic) {
+        return this.airconMapper.getControllerId(topic);
     }
 }
 exports.LocalMqttService = LocalMqttService;

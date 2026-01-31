@@ -7,6 +7,7 @@ import DeviceDataModel from "../../models/DeviceDataModel";
 import PersonDetectionState from "../../models/PersonDetectionState";
 import { CloudMqttService } from "./CloudMqttService";
 import RpiTopicMapper from "../../utils/RpiTopicMapper";
+import AirconTopicMapper from "../../utils/AirconTopicMapper";
 const Logger = require("../../utils/Logger");
 
 export class MqttMessageHandlerService {
@@ -14,6 +15,7 @@ export class MqttMessageHandlerService {
   private personDetectionState: PersonDetectionState;
   private cloudMqtt: CloudMqttService;
   private rpiMapper: RpiTopicMapper;
+  private airconMapper: AirconTopicMapper;
 
   constructor(
     deviceModel: DeviceDataModel,
@@ -24,6 +26,7 @@ export class MqttMessageHandlerService {
     this.personDetectionState = personDetectionState;
     this.cloudMqtt = cloudMqtt;
     this.rpiMapper = new RpiTopicMapper(); // Initialize with default mappings (rpi1, rpi2)
+    this.airconMapper = new AirconTopicMapper(); // Initialize with default mappings (airconController1, airconController2, airconController3)
     Logger.info("MqttMessageHandlerService initialized");
   }
 
@@ -166,13 +169,14 @@ export class MqttMessageHandlerService {
    * Extract Aircon Controller ID from topic
    * @private
    * @param topic - MQTT topic
-   * @returns Controller index (0, 1, or 2)
+   * @returns Controller index (0, 1, 2, etc.)
+   *
+   * Supports formats:
+   * - Legacy: myFinalProject/airconController1/measure -> 0
+   * - New: myFinalProject/airconController/aircon_8CAAB5936934/measure -> mapped index
    */
   private _getControllerId(topic: string): number {
-    if (topic.includes("/airconController1/")) return 0;
-    if (topic.includes("/airconController2/")) return 1;
-    if (topic.includes("/airconController3/")) return 2;
-    return 0; // Default fallback
+    return this.airconMapper.getControllerId(topic);
   }
 }
 

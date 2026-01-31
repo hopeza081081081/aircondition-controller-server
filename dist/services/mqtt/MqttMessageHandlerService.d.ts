@@ -10,6 +10,7 @@ export declare class MqttMessageHandlerService {
     private personDetectionState;
     private cloudMqtt;
     private rpiMapper;
+    private airconMapper;
     constructor(deviceModel: DeviceDataModel, personDetectionState: PersonDetectionState, cloudMqtt: CloudMqttService);
     /**
      * Handle incoming MQTT message
@@ -46,7 +47,11 @@ export declare class MqttMessageHandlerService {
      * Extract Aircon Controller ID from topic
      * @private
      * @param topic - MQTT topic
-     * @returns Controller index (0, 1, or 2)
+     * @returns Controller index (0, 1, 2, etc.)
+     *
+     * Supports formats:
+     * - Legacy: myFinalProject/airconController1/measure -> 0
+     * - New: myFinalProject/airconController/aircon_8CAAB5936934/measure -> mapped index
      */
     private _getControllerId;
 }

@@ -3,11 +3,12 @@
  * Manages local MQTT broker connection
  */
 import { MqttClient } from './MqttClient';
-import { MqttConfig, SubscriptionConfig } from '../../types';
+import { MqttConfig, SubscriptionConfig, AirconMappingConfig } from '../../types';
 export declare class LocalMqttService extends MqttClient {
     private initialized;
     private reconnectInterval;
-    constructor(config: MqttConfig);
+    private airconMapper;
+    constructor(config: MqttConfig, airconConfig?: AirconMappingConfig[]);
     /**
      * Initialize local MQTT service (non-blocking)
      * Connection failures won't crash the application
@@ -34,7 +35,7 @@ export declare class LocalMqttService extends MqttClient {
     publishOnlineStatus(status: string): Promise<void>;
     /**
      * Publish command to aircon controller with retry
-     * @param controllerId - Controller ID (1, 2, or 3)
+     * @param controllerId - Controller ID (0, 1, or 2 - internal index)
      * @param command - Command ('true' or 'false')
      */
     publishCommand(controllerId: number, command: string): Promise<void>;
@@ -48,5 +49,17 @@ export declare class LocalMqttService extends MqttClient {
      * @returns True if initialized
      */
     isInitialized(): boolean;
+    /**
+     * Get aircon controller identifier by index
+     * @param controllerId - Controller index (0, 1, 2, etc.)
+     * @returns Identifier string (e.g., 'aircon_8CAAB5936934') or empty string if not found
+     */
+    getAirconIdentifier(controllerId: number): string;
+    /**
+     * Get aircon controller index from topic
+     * @param topic - MQTT topic string
+     * @returns Controller index (0, 1, 2, etc.) or -1 if not found
+     */
+    getAirconControllerId(topic: string): number;
 }
 //# sourceMappingURL=LocalMqttService.d.ts.map

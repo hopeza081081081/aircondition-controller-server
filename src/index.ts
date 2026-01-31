@@ -7,7 +7,7 @@
 import * as dotenv from "dotenv";
 dotenv.config();
 
-import config from "./config";
+import config, { airconControllerConfig } from "./config";
 import Logger from "./utils/Logger";
 
 // Models
@@ -48,7 +48,7 @@ async function initialize(): Promise<void> {
 
     // Initialize MQTT services
     Logger.info("Initializing MQTT services...");
-    localMqtt = new LocalMqttService(config.mqtt.local);
+    localMqtt = new LocalMqttService(config.mqtt.local, airconControllerConfig);
     cloudMqtt = new CloudMqttService(config.mqtt.cloud);
 
     // Connect to MQTT brokers (non-blocking - won't crash if connection fails)

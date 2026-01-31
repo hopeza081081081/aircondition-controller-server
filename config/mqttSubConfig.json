@@ -5,13 +5,7 @@
     "myFinalProject/+/onlineStatus/online": {
         "qos": 2
     },
-    "myFinalProject/airconController1/#": {
-        "qos": 2
-    },
-    "myFinalProject/airconController2/#": {
-        "qos": 2
-    },
-    "myFinalProject/airconController3/#": {
+    "myFinalProject/airconController/+/+": {
         "qos": 2
     }
 }

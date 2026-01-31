@@ -96,7 +96,7 @@ export class PersonDetectionService {
     const controllerCount = this.deviceModel.state.airconController.length;
 
     for (let i = 0; i < controllerCount; i++) {
-      const controllerId = i + 1;
+      const controllerId = i;
 
       try {
         // Publish to local MQTT (only if connected)
@@ -109,7 +109,13 @@ export class PersonDetectionService {
         // Publish to cloud MQTT (non-critical)
         if (this.cloudMqtt && this.cloudMqtt.isConnected()) {
           try {
-            await this.cloudMqtt.publish(`myFinalProject/server/electricalAppliances/airconController${controllerId}/command`, 'false', { qos: 0, retain: true });
+            // Get the identifier for this controller
+            const identifier = this.localMqtt.getAirconIdentifier(controllerId);
+            if (identifier) {
+              await this.cloudMqtt.publish(`myFinalProject/server/airconController/${identifier}/command`, 'false', { qos: 0, retain: true });
+            } else {
+              Logger.warn(`No identifier found for controller index ${controllerId}`);
+            }
           } catch (cloudError) {
             Logger.warn(`Failed to relay controller ${controllerId} off command to cloud`, cloudError as Error);
           }
@@ -133,7 +139,7 @@ export class PersonDetectionService {
     const controllerCount = this.deviceModel.state.airconController.length;
 
     for (let i = 0; i < controllerCount; i++) {
-      const controllerId = i + 1;
+      const controllerId = i;
 
       try {
         // Publish to local MQTT (only if connected)
@@ -146,7 +152,13 @@ export class PersonDetectionService {
         // Publish to cloud MQTT (non-critical)
         if (this.cloudMqtt && this.cloudMqtt.isConnected()) {
           try {
-            await this.cloudMqtt.publish(`myFinalProject/server/electricalAppliances/airconController${controllerId}/command`, 'true', { qos: 0, retain: true });
+            // Get the identifier for this controller
+            const identifier = this.localMqtt.getAirconIdentifier(controllerId);
+            if (identifier) {
+              await this.cloudMqtt.publish(`myFinalProject/server/airconController/${identifier}/command`, 'true', { qos: 0, retain: true });
+            } else {
+              Logger.warn(`No identifier found for controller index ${controllerId}`);
+            }
           } catch (cloudError) {
             Logger.warn(`Failed to relay controller ${controllerId} on command to cloud`, cloudError as Error);
           }

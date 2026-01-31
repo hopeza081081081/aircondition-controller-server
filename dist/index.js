@@ -43,7 +43,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 // Load environment variables first
 const dotenv = __importStar(require("dotenv"));
 dotenv.config();
-const config_1 = __importDefault(require("./config"));
+const config_1 = __importStar(require("./config"));
 const Logger_1 = __importDefault(require("./utils/Logger"));
 // Models
 const DeviceDataModel_1 = __importDefault(require("./models/DeviceDataModel"));
@@ -78,7 +78,7 @@ async function initialize() {
         personDetectionState = new PersonDetectionState_1.default();
         // Initialize MQTT services
         Logger_1.default.info("Initializing MQTT services...");
-        localMqtt = new LocalMqttService_1.LocalMqttService(config_1.default.mqtt.local);
+        localMqtt = new LocalMqttService_1.LocalMqttService(config_1.default.mqtt.local, config_1.airconControllerConfig);
         cloudMqtt = new CloudMqttService_1.CloudMqttService(config_1.default.mqtt.cloud);
         // Connect to MQTT brokers (non-blocking - won't crash if connection fails)
         await localMqtt.initialize();

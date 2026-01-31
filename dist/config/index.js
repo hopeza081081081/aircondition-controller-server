@@ -40,6 +40,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.airconControllerConfig = void 0;
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const Logger = require('../utils/Logger');
@@ -48,8 +49,10 @@ const app_config_1 = __importDefault(require("./app.config"));
 // Load JSON configuration files
 const deviceDataModelPath = path.join(__dirname, '../../config/deviceDataModel.json');
 const mqttSubConfigPath = path.join(__dirname, '../../config/mqttSubConfig.json');
+const airconControllerConfigPath = path.join(__dirname, '../../config/airconControllerConfig.json');
 let deviceDataModel;
 let mqttSubscriptions;
+let airconControllerConfig;
 try {
     deviceDataModel = JSON.parse(fs.readFileSync(deviceDataModelPath, 'utf8'));
     Logger.info('Device data model loaded successfully');
@@ -64,6 +67,14 @@ try {
 }
 catch (error) {
     Logger.error('Failed to load mqttSubConfig.json', error);
+    throw error;
+}
+try {
+    exports.airconControllerConfig = airconControllerConfig = JSON.parse(fs.readFileSync(airconControllerConfigPath, 'utf8'));
+    Logger.info('Aircon controller config loaded successfully', { path: airconControllerConfigPath });
+}
+catch (error) {
+    Logger.error('Failed to load airconControllerConfig.json', error);
     throw error;
 }
 // Export aggregated configuration

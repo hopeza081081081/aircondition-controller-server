@@ -48,8 +48,14 @@ declare class DeviceDataModel {
      */
     resetRpiState(id: number): void;
     /**
+     * Ensure aircon controller array is large enough for the given ID
+     * @private
+     * @param id - Controller ID to accommodate
+     */
+    private _ensureAirconCapacity;
+    /**
      * Update aircon controller properties
-     * @param {number} id - Controller ID (0, 1, or 2)
+     * @param {number} id - Controller ID (0, 1, 2, etc.)
      * @param {{ wifiLocalIP: string; online: boolean; bootcount: number }} properties - Properties to update
      */
     updateAirconProperties(id: number, properties: {
@@ -59,18 +65,18 @@ declare class DeviceDataModel {
     }): void;
     /**
      * Update aircon controller measure data
-     * @param {number} id - Controller ID (0, 1, or 2)
+     * @param {number} id - Controller ID (0, 1, 2, etc.)
      * @param {AirconMeasure} measure - Measurement data
      */
     updateAirconMeasure(id: number, measure: AirconMeasure): void;
     /**
      * Reset aircon measurements when offline
-     * @param {number} id - Controller ID (0, 1, or 2)
+     * @param {number} id - Controller ID (0, 1, 2, etc.)
      */
     resetAirconMeasure(id: number): void;
     /**
      * Set aircon controller command
-     * @param {number} id - Controller ID (0, 1, or 2)
+     * @param {number} id - Controller ID (0, 1, 2, etc.)
      * @param {boolean} command - Command state (true=on, false=off)
      */
     setAirconCommand(id: number, command: boolean): void;
