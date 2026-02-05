@@ -2,18 +2,14 @@
  * Person Detection Service
  * Business logic for person detection and aircon control
  */
-import PersonDetectionState from '../models/PersonDetectionState';
-import DeviceDataModel from '../models/DeviceDataModel';
-import { LocalMqttService } from './mqtt/LocalMqttService';
-import { CloudMqttService } from './mqtt/CloudMqttService';
-import { AppConfig } from '../types';
+import PersonDetectionState from "../models/PersonDetectionState";
+import AirconControllerService from "./AirconControllerService";
+import { AppConfig } from "../types";
 export declare class PersonDetectionService {
     private personDetectionState;
-    private deviceModel;
-    private localMqtt;
-    private cloudMqtt;
+    private airconController;
     private config;
-    constructor(personDetectionState: PersonDetectionState, deviceModel: DeviceDataModel, localMqtt: LocalMqttService, cloudMqtt: CloudMqttService, config: AppConfig);
+    constructor(personDetectionState: PersonDetectionState, airconController: AirconControllerService, config: AppConfig);
     /**
      * Execute person detection logic
      */
@@ -28,16 +24,6 @@ export declare class PersonDetectionService {
      * @private
      */
     private _handlePersonDetected;
-    /**
-     * Turn off all aircon controllers
-     * @private
-     */
-    private _turnOffAllAircons;
-    /**
-     * Turn on all aircon controllers
-     * @private
-     */
-    private _turnOnAllAircons;
 }
 export default PersonDetectionService;
 //# sourceMappingURL=PersonDetectionService.d.ts.map

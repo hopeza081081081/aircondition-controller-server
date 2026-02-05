@@ -2,8 +2,8 @@
  * Local MQTT Service
  * Manages local MQTT broker connection
  */
-import { MqttClient } from './MqttClient';
-import { MqttConfig, SubscriptionConfig, AirconMappingConfig } from '../../types';
+import { MqttClient } from "./MqttClient";
+import { MqttConfig, SubscriptionConfig, AirconMappingConfig } from "../../types";
 export declare class LocalMqttService extends MqttClient {
     private initialized;
     private reconnectInterval;

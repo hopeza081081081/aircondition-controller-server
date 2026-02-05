@@ -3,18 +3,16 @@
  * Manages device operations and periodic events
  */
 
-import DeviceDataModel from '../models/DeviceDataModel';
-import { PersonDetectionService } from './PersonDetectionService';
-import { LocalMqttService } from './mqtt/LocalMqttService';
-import { CloudMqttService } from './mqtt/CloudMqttService';
-import { AppConfig } from '../types';
-const Logger = require('../utils/Logger');
+import DeviceDataModel from "../models/DeviceDataModel";
+import { PersonDetectionService } from "./PersonDetectionService";
+import AirconControllerService from "./AirconControllerService";
+import { AppConfig } from "../types";
+const Logger = require("../utils/Logger");
 
 export class RaspberrypiService {
   private deviceModel: DeviceDataModel;
   private personDetectionService: PersonDetectionService;
-  private localMqtt: LocalMqttService;
-  private cloudMqtt: CloudMqttService;
+  private airconController: AirconControllerService;
   private config: AppConfig;
   private eventInterval: NodeJS.Timeout | null;
   private running: boolean;
@@ -22,18 +20,16 @@ export class RaspberrypiService {
   constructor(
     deviceModel: DeviceDataModel,
     personDetectionService: PersonDetectionService,
-    localMqtt: LocalMqttService,
-    cloudMqtt: CloudMqttService,
-    config: AppConfig
+    airconController: AirconControllerService,
+    config: AppConfig,
   ) {
     this.deviceModel = deviceModel;
     this.personDetectionService = personDetectionService;
-    this.localMqtt = localMqtt;
-    this.cloudMqtt = cloudMqtt;
+    this.airconController = airconController;
     this.config = config;
     this.eventInterval = null;
     this.running = false;
-    Logger.info('RaspberrypiService initialized');
+    Logger.info("RaspberrypiService initialized");
   }
 
   /**
@@ -41,7 +37,7 @@ export class RaspberrypiService {
    */
   public start(): void {
     if (this.running) {
-      Logger.warn('RaspberrypiService already running');
+      Logger.warn("RaspberrypiService already running");
       return;
     }
 
@@ -52,8 +48,8 @@ export class RaspberrypiService {
       this._processEvent();
     }, this.config.app.eventProcessInterval);
 
-    Logger.info('RaspberrypiService started', {
-      interval: `${this.config.app.eventProcessInterval}ms`
+    Logger.info("RaspberrypiService started", {
+      interval: `${this.config.app.eventProcessInterval}ms`,
     });
   }
 
@@ -72,7 +68,7 @@ export class RaspberrypiService {
       this.eventInterval = null;
     }
 
-    Logger.info('RaspberrypiService stopped');
+    Logger.info("RaspberrypiService stopped");
   }
 
   /**
@@ -94,7 +90,7 @@ export class RaspberrypiService {
       // Note: MongoDB saving is handled by MongoDBService.startPeriodicSaving()
       // This method is called periodically by the service itself
     } catch (error) {
-      Logger.error('RaspberrypiService event processing error', error as Error);
+      Logger.error("RaspberrypiService event processing error", error as Error);
     }
   }
 
@@ -103,39 +99,8 @@ export class RaspberrypiService {
    * @private
    */
   private async _handleAllRpisOffline(): Promise<void> {
-    Logger.warn('All RPIs are offline, turning off all aircons');
-
-    const controllerCount = this.deviceModel.state.airconController.length;
-
-    for (let i = 0; i < controllerCount; i++) {
-      const controllerId = i;
-
-      try {
-        // Publish to local MQTT (only if connected)
-        if (this.localMqtt && this.localMqtt.isConnected()) {
-          await this.localMqtt.publishCommand(controllerId, 'false');
-        } else {
-          Logger.warn(`Local MQTT not connected - skipping controller ${controllerId} off command`);
-        }
-
-        // Publish to cloud MQTT (non-critical)
-        if (this.cloudMqtt && this.cloudMqtt.isConnected()) {
-          try {
-            // Get the identifier for this controller
-            const identifier = this.localMqtt.getAirconIdentifier(controllerId);
-            if (identifier) {
-              await this.cloudMqtt.publish(`myFinalProject/server/airconController/${identifier}/command`, 'false', { qos: 0, retain: true });
-            } else {
-              Logger.warn(`No identifier found for controller index ${controllerId}`);
-            }
-          } catch (cloudError) {
-            Logger.warn(`Failed to relay controller ${controllerId} off command to cloud`, cloudError as Error);
-          }
-        }
-      } catch (error) {
-        Logger.error(`Failed to turn off controller ${controllerId} when RPIs offline`, error as Error);
-      }
-    }
+    Logger.warn("All RPIs are offline, turning off all aircons");
+    await this.airconController.turnOffAll("All RPIs offline");
   }
 
   /**

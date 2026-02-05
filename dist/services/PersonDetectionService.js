@@ -5,15 +5,13 @@
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PersonDetectionService = void 0;
-const Logger = require('../utils/Logger');
+const Logger = require("../utils/Logger");
 class PersonDetectionService {
-    constructor(personDetectionState, deviceModel, localMqtt, cloudMqtt, config) {
+    constructor(personDetectionState, airconController, config) {
         this.personDetectionState = personDetectionState;
-        this.deviceModel = deviceModel;
-        this.localMqtt = localMqtt;
-        this.cloudMqtt = cloudMqtt;
+        this.airconController = airconController;
         this.config = config;
-        Logger.info('PersonDetectionService initialized');
+        Logger.info("PersonDetectionService initialized");
     }
     /**
      * Execute person detection logic
@@ -22,7 +20,7 @@ class PersonDetectionService {
         try {
             const detections = this.personDetectionState.getAllDetectionMessages();
             // Check if any RPI detected a person
-            const anyPersonDetected = detections.some(detection => detection.isPerson);
+            const anyPersonDetected = detections.some((detection) => detection.isPerson);
             // No person detected by any RPI
             if (!anyPersonDetected) {
                 await this._handleNoPersonDetected();
@@ -33,7 +31,7 @@ class PersonDetectionService {
             }
         }
         catch (error) {
-            Logger.error('PersonDetectionService execution error', error);
+            Logger.error("PersonDetectionService execution error", error);
         }
     }
     /**
@@ -44,9 +42,9 @@ class PersonDetectionService {
         // If person was detected before, start shutdown timer
         if (this.personDetectionState.getCurrentState()) {
             this.personDetectionState.setState(false);
-            Logger.info('Person disappeared, starting shutdown timer');
+            Logger.info("Person disappeared, starting shutdown timer");
             this.personDetectionState.startShutdownTimer(async () => {
-                await this._turnOffAllAircons();
+                await this.airconController.turnOffAll("No person detected - shutdown timer expired");
             }, this.config.app.airconPowerOffDuration);
         }
     }
@@ -59,91 +57,9 @@ class PersonDetectionService {
         if (!this.personDetectionState.getCurrentState()) {
             this.personDetectionState.clearShutdownTimer();
             this.personDetectionState.setState(true);
-            Logger.info('Person detected, turning on aircons');
-            await this._turnOnAllAircons();
+            Logger.info("Person detected, turning on aircons");
+            await this.airconController.turnOnAll("Person detected");
         }
-    }
-    /**
-     * Turn off all aircon controllers
-     * @private
-     */
-    async _turnOffAllAircons() {
-        const controllerCount = this.deviceModel.state.airconController.length;
-        for (let i = 0; i < controllerCount; i++) {
-            const controllerId = i;
-            try {
-                // Publish to local MQTT (only if connected)
-                if (this.localMqtt && this.localMqtt.isConnected()) {
-                    await this.localMqtt.publishCommand(controllerId, 'false');
-                }
-                else {
-                    Logger.warn(`Local MQTT not connected - skipping controller ${controllerId} off command`);
-                }
-                // Publish to cloud MQTT (non-critical)
-                if (this.cloudMqtt && this.cloudMqtt.isConnected()) {
-                    try {
-                        // Get the identifier for this controller
-                        const identifier = this.localMqtt.getAirconIdentifier(controllerId);
-                        if (identifier) {
-                            await this.cloudMqtt.publish(`myFinalProject/server/airconController/${identifier}/command`, 'false', { qos: 0, retain: true });
-                        }
-                        else {
-                            Logger.warn(`No identifier found for controller index ${controllerId}`);
-                        }
-                    }
-                    catch (cloudError) {
-                        Logger.warn(`Failed to relay controller ${controllerId} off command to cloud`, cloudError);
-                    }
-                }
-                // Update device model
-                this.deviceModel.setAirconCommand(i, false);
-            }
-            catch (error) {
-                Logger.error(`Failed to turn off controller ${controllerId}`, error);
-            }
-        }
-        Logger.info('All aircon controllers turned off');
-    }
-    /**
-     * Turn on all aircon controllers
-     * @private
-     */
-    async _turnOnAllAircons() {
-        const controllerCount = this.deviceModel.state.airconController.length;
-        for (let i = 0; i < controllerCount; i++) {
-            const controllerId = i;
-            try {
-                // Publish to local MQTT (only if connected)
-                if (this.localMqtt && this.localMqtt.isConnected()) {
-                    await this.localMqtt.publishCommand(controllerId, 'true');
-                }
-                else {
-                    Logger.warn(`Local MQTT not connected - skipping controller ${controllerId} on command`);
-                }
-                // Publish to cloud MQTT (non-critical)
-                if (this.cloudMqtt && this.cloudMqtt.isConnected()) {
-                    try {
-                        // Get the identifier for this controller
-                        const identifier = this.localMqtt.getAirconIdentifier(controllerId);
-                        if (identifier) {
-                            await this.cloudMqtt.publish(`myFinalProject/server/airconController/${identifier}/command`, 'true', { qos: 0, retain: true });
-                        }
-                        else {
-                            Logger.warn(`No identifier found for controller index ${controllerId}`);
-                        }
-                    }
-                    catch (cloudError) {
-                        Logger.warn(`Failed to relay controller ${controllerId} on command to cloud`, cloudError);
-                    }
-                }
-                // Update device model
-                this.deviceModel.setAirconCommand(i, true);
-            }
-            catch (error) {
-                Logger.error(`Failed to turn on controller ${controllerId}`, error);
-            }
-        }
-        Logger.info('All aircon controllers turned on');
     }
 }
 exports.PersonDetectionService = PersonDetectionService;

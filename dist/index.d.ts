@@ -1,6 +1,6 @@
 /**
  * Main Entry Point
- * Orchestrates all modules and starts the application
+ * Application entry point - delegates to bootstrap and shutdown modules
  */
 export {};
 //# sourceMappingURL=index.d.ts.map

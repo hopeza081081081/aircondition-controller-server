@@ -2,20 +2,18 @@
  * Device Controller
  * Manages device operations and periodic events
  */
-import DeviceDataModel from '../models/DeviceDataModel';
-import { PersonDetectionService } from './PersonDetectionService';
-import { LocalMqttService } from './mqtt/LocalMqttService';
-import { CloudMqttService } from './mqtt/CloudMqttService';
-import { AppConfig } from '../types';
+import DeviceDataModel from "../models/DeviceDataModel";
+import { PersonDetectionService } from "./PersonDetectionService";
+import AirconControllerService from "./AirconControllerService";
+import { AppConfig } from "../types";
 export declare class RaspberrypiService {
     private deviceModel;
     private personDetectionService;
-    private localMqtt;
-    private cloudMqtt;
+    private airconController;
     private config;
     private eventInterval;
     private running;
-    constructor(deviceModel: DeviceDataModel, personDetectionService: PersonDetectionService, localMqtt: LocalMqttService, cloudMqtt: CloudMqttService, config: AppConfig);
+    constructor(deviceModel: DeviceDataModel, personDetectionService: PersonDetectionService, airconController: AirconControllerService, config: AppConfig);
     /**
      * Start device controller
      */

@@ -5,24 +5,23 @@
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RaspberrypiService = void 0;
-const Logger = require('../utils/Logger');
+const Logger = require("../utils/Logger");
 class RaspberrypiService {
-    constructor(deviceModel, personDetectionService, localMqtt, cloudMqtt, config) {
+    constructor(deviceModel, personDetectionService, airconController, config) {
         this.deviceModel = deviceModel;
         this.personDetectionService = personDetectionService;
-        this.localMqtt = localMqtt;
-        this.cloudMqtt = cloudMqtt;
+        this.airconController = airconController;
         this.config = config;
         this.eventInterval = null;
         this.running = false;
-        Logger.info('RaspberrypiService initialized');
+        Logger.info("RaspberrypiService initialized");
     }
     /**
      * Start device controller
      */
     start() {
         if (this.running) {
-            Logger.warn('RaspberrypiService already running');
+            Logger.warn("RaspberrypiService already running");
             return;
         }
         this.running = true;
@@ -30,8 +29,8 @@ class RaspberrypiService {
         this.eventInterval = setInterval(() => {
             this._processEvent();
         }, this.config.app.eventProcessInterval);
-        Logger.info('RaspberrypiService started', {
-            interval: `${this.config.app.eventProcessInterval}ms`
+        Logger.info("RaspberrypiService started", {
+            interval: `${this.config.app.eventProcessInterval}ms`,
         });
     }
     /**
@@ -46,7 +45,7 @@ class RaspberrypiService {
             clearInterval(this.eventInterval);
             this.eventInterval = null;
         }
-        Logger.info('RaspberrypiService stopped');
+        Logger.info("RaspberrypiService stopped");
     }
     /**
      * Process periodic event
@@ -67,7 +66,7 @@ class RaspberrypiService {
             // This method is called periodically by the service itself
         }
         catch (error) {
-            Logger.error('RaspberrypiService event processing error', error);
+            Logger.error("RaspberrypiService event processing error", error);
         }
     }
     /**
@@ -75,39 +74,8 @@ class RaspberrypiService {
      * @private
      */
     async _handleAllRpisOffline() {
-        Logger.warn('All RPIs are offline, turning off all aircons');
-        const controllerCount = this.deviceModel.state.airconController.length;
-        for (let i = 0; i < controllerCount; i++) {
-            const controllerId = i;
-            try {
-                // Publish to local MQTT (only if connected)
-                if (this.localMqtt && this.localMqtt.isConnected()) {
-                    await this.localMqtt.publishCommand(controllerId, 'false');
-                }
-                else {
-                    Logger.warn(`Local MQTT not connected - skipping controller ${controllerId} off command`);
-                }
-                // Publish to cloud MQTT (non-critical)
-                if (this.cloudMqtt && this.cloudMqtt.isConnected()) {
-                    try {
-                        // Get the identifier for this controller
-                        const identifier = this.localMqtt.getAirconIdentifier(controllerId);
-                        if (identifier) {
-                            await this.cloudMqtt.publish(`myFinalProject/server/airconController/${identifier}/command`, 'false', { qos: 0, retain: true });
-                        }
-                        else {
-                            Logger.warn(`No identifier found for controller index ${controllerId}`);
-                        }
-                    }
-                    catch (cloudError) {
-                        Logger.warn(`Failed to relay controller ${controllerId} off command to cloud`, cloudError);
-                    }
-                }
-            }
-            catch (error) {
-                Logger.error(`Failed to turn off controller ${controllerId} when RPIs offline`, error);
-            }
-        }
+        Logger.warn("All RPIs are offline, turning off all aircons");
+        await this.airconController.turnOffAll("All RPIs offline");
     }
     /**
      * Handle at least one RPI online scenario
